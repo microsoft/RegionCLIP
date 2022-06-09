@@ -1,0 +1,15 @@
+_BASE_: "./clip_resnet_yfcc_debug.yaml"
+DATASETS:
+  TRAIN: ("yfcc100m",)
+  FACTORY_TRAIN: ("CLIPImgTxtPairTSVDataset",)
+  PATH_TRAIN: ("/tmp/datasets/CC3M",) # ("/mnt/data_storage/CC3M-filtered/CC3M",) # ("/mnt/data_storage/CC3M-filtered/CC1M_0123",) # ("/mnt/data_storage/CC3M-filtered/CC2M_01234567",) # 
+SOLVER: # refer to cvpr ovr
+  IMS_PER_BATCH: 96 # 32 gpu
+  BASE_LR: 0.002
+  WEIGHT_DECAY: 0.0001
+  STEPS: (500000, 1050000)  # (300000, 525000)  #  (100000, 175000) # (50000, 87500)  # (20000*2.5, 35000*2.5)
+  MAX_ITER: 1200000  # 600000  # 200000 # 100000  # 1080000 img * 8.9 ep / 96 batch = 100000, 2.5 times over 40000
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "norm"
+    CLIP_VALUE: 5.0

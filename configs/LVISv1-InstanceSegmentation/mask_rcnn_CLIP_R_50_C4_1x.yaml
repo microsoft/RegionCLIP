@@ -1,0 +1,55 @@
+_BASE_: "../Base-RCNN-C4.yaml"
+MODEL:
+  META_ARCHITECTURE: "GeneralizedRCNN"
+  BACKBONE:
+    NAME: "build_clip_resnet_backbone" #"build_clip_resnet_fpn_backbone" # "build_resnet_fpn_backbone"
+    FREEZE_AT: 2
+  WEIGHTS: "" # "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  MASK_ON: True
+  RESNETS:
+    DEPTH: 50
+    OUT_FEATURES: ["res4"]
+    NORM: FrozenBN
+    STEM_OUT_CHANNELS: 64
+    RES2_OUT_CHANNELS: 256
+  RPN:
+    HEAD_NAME: StandardRPNHead
+    IN_FEATURES: ["res4"]
+  ROI_HEADS:
+    NAME: "CLIPRes5ROIHeads" # "Res5ROIHeads" # "StandardROIHeads"
+    IN_FEATURES: ["res4"]
+    NUM_CLASSES: 1203
+    SCORE_THRESH_TEST: 0.0001
+  ROI_BOX_HEAD:
+    NAME: ""
+    NUM_FC: 0
+    POOLER_RESOLUTION: 14
+  ROI_MASK_HEAD:
+    NAME: "MaskRCNNConvUpsampleHead"
+    NUM_CONV: 0
+    POOLER_RESOLUTION: 14
+  PIXEL_MEAN: [0.48145466, 0.4578275, 0.40821073] # [103.530, 116.280, 123.675] # 
+  PIXEL_STD: [0.26862954, 0.26130258, 0.27577711] # [1.0, 1.0, 1.0] # 
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+DATASETS:
+  TRAIN: ("lvis_v1_train",)
+  TEST: ("lvis_v1_val",)
+TEST:
+  DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
+  EVAL_PERIOD: 25000
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.02
+  STEPS: (120000, 160000) # (140000,)  #
+  MAX_ITER: 180000  # 180000 * 16 / 100000 ~ 28.8 epochs
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.001
+INPUT:
+  MIN_SIZE_TRAIN_SAMPLING: choice
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+  MAX_SIZE_TRAIN: 1333
+  MIN_SIZE_TEST: 800
+  MAX_SIZE_TEST: 1333
+  FORMAT: "RGB" # "BGR"

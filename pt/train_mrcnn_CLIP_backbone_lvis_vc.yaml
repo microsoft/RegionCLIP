@@ -1,0 +1,1047 @@
+description: train Mask RCNN on LVIS
+
+target:
+  vc: hcrr08 # hcrr07 # hai1 # hcrr08 # hcrr07 # resrchvc  # 
+  service: amlk8s
+  name: ms-shared-v100 # itphyperdgx2cl2 # ms-shared-v100 #  itpeastusv100cl # itpscusv100cl  #  itpseasiav100cl #  itplabrr1cl1  # 
+  #subscription_id: 46da6261-2167-4e71-8b0d-f4a45215ce61
+
+environment:
+  image: wangkenpu/pytorch:1.8.0-py39-cuda11.1-cudnn8-ubuntu18.04 # amsword/setup:py36pt17u18cu11 # jw2yang/video-pytorch1.7:v0.1 
+  registry: docker.io
+
+storage:  
+  # By default, the mount path is /mnt/data_storage, /mnt/output_storage
+  data_storage:
+    storage_account_name: vlpdatasets
+    container_name: data
+  output_storage:
+    storage_account_name: vyiwuzhong
+    container_name: phillytools 
+
+code:
+  # local directory of the code. this will be uploaded to the server.
+  # $CONFIG_DIR is expanded to the directory of this config file
+  local_dir: ./
+
+# exp: CLIP inference to classify cropped GT / RPN regions
+# search:
+#   job_template:
+#     name: test_CLIP_rcnn_resnet50_crop_regions_rpn
+#     sku: G8 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     - python3 ./tools/train_net.py
+#       --num-gpus {num_gpus}
+#       --eval-only
+#       --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_rcnn_R_50.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+#       OUTPUT_DIR /mnt/output_storage/results/test_CLIP_rcnn_resnet50_crop_regions_rpn
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.RPN.NMS_THRESH 0.9
+#       MODEL.ROI_HEADS.NMS_THRESH_TEST 0.6
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+
+#       # MODEL.CLIP.CROP_REGION_TYPE RPN
+#       # MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       # MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_rcnn_R_50.yaml
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_rcnn_VITB32.yaml
+#       #MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+#       #MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/VITB32_OAI_CLIP.pth
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: num_gpus
+#       spec: discrete
+#       values: [8]
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+
+# exp: CLIPFastRCNN zeroshot inference on LVIS with RoIAlign to extract region features (GT / RPN regions)
+# search:
+#   job_template:
+#     name: test_CLIP_fast_rcnn_resnet50_openbaselinefpnrpn_ourclipcntrstkl_rpn_clipgtcropasfalse
+#     sku: G8 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     - python3 ./tools/train_net.py
+#       --num-gpus 8
+#       --eval-only
+#       --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_freezeat2_b48_2ndmatch_norm01thres_normtemp001_100of300regions_iou05_cntrstkl/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.ROI_HEADS.NMS_THRESH_TEST 0.6
+#       MODEL.CLIP.CLSS_TEMP 0.1
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+#       #MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.02
+#       #MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+
+#       # MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+#       #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_offlinesupervisedclipc4rpn_gtbox_freezeat5_temp0.01/model_final.pth
+#       #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_offlinesupervisedclipfpnrpn_temp0.01_zerobgembfixed_onlyfgrois/model_final.pth
+#       #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_offlinesupervisedclipfpnrpn_temp0.01_zerobgembfixed/model_final.pth
+#       # MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_sumtxt_temp1/model_0039999.pth
+#       # MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_freezeat2_b48_2ndmatch_norm01thres_normtemp001_100of300regions_iou05_cntrstkl/model_0039999.pth
+#       # MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       #MODEL.WEIGHTS /mnt/output_storage/trained_models/mrcnn_supervised/fpn/model_final.pth
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_C4_1x.yaml
+#       #MODEL.WEIGHTS /mnt/output_storage/trained_models/mrcnn_supervised/c4/model_final.pth
+
+#     - python3 ./tools/train_net.py
+#       --num-gpus 8
+#       --eval-only
+#       --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_freezeat2_b48_2ndmatch_norm01thres_normtemp001_100of300regions_iou05_cntrstkl/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.ROI_HEADS.NMS_THRESH_TEST 0.6
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # - python3 ./tools/train_net.py
+#     #   --num-gpus 8
+#     #   --eval-only
+#     #   --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+#     #   MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#     #   MODEL.CLIP.CROP_REGION_TYPE GT
+#     #   MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#     #   MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#     #   MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#     #   MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm.pth
+#     #   MODEL.CLIP.NO_BOX_DELTA True
+#     #   MODEL.MASK_ON False
+#     #   SOLVER.IMS_PER_BATCH {ims_per_batch}
+#     #   DATALOADER.NUM_WORKERS {num_workers}
+#     #   MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#     #   MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#     #   MODEL.ROI_HEADS.NMS_THRESH_TEST 0.6
+#     #   MODEL.CLIP.CLSS_TEMP 0.1
+
+#     # - python3 ./tools/train_net.py
+#     #   --num-gpus 8
+#     #   --eval-only
+#     #   --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+#     #   MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#     #   MODEL.CLIP.CROP_REGION_TYPE GT
+#     #   MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#     #   MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#     #   MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#     #   MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm.pth
+#     #   MODEL.CLIP.NO_BOX_DELTA True
+#     #   MODEL.MASK_ON False
+#     #   SOLVER.IMS_PER_BATCH {ims_per_batch}
+#     #   DATALOADER.NUM_WORKERS {num_workers}
+#     #   MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#     #   MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#     #   MODEL.ROI_HEADS.NMS_THRESH_TEST 0.6
+#     #   MODEL.CLIP.CLSS_TEMP 0.01
+
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+# exp: CLIPFastRCNN LVIS/COCO supervised training with RoIAlign to extract region features (GT / RPN regions) and offline localization module
+# search:
+#   job_template:
+#     name: train_CLIP_fast_rcnn_resnet50_supclipfpnrpn_temp001_ourclipcc3m600k
+#     sku: G16 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     - python3 ./tools/train_net.py
+#       --num-gpus 16
+#       --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/dpretrain_frzt2_b96_glbimg_cntrstkl_exp639_lr0002_cc3m_600k/model_final.pth
+#       OUTPUT_DIR /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_supclipfpnrpn_temp001_ourclipcc3m600k
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_clip_backbone_supervised/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+#       SOLVER.WARMUP_ITERS 5000
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       TEST.EVAL_PERIOD 75000
+#       MODEL.MASK_ON True
+#       #MODEL.CLIP.BG_CLS_LOSS_WEIGHT 0.8
+#       # MODEL.CLIP.ONLY_SAMPLE_FG_PROPOSALS True
+#       # MODEL.CLIP.MULTIPLY_RPN_SCORE True
+#       # MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       #MODEL.BACKBONE.FREEZE_AT 5
+#       #TEST.EVAL_PERIOD 5000
+#       #MODEL.ROI_HEADS.PROPOSAL_APPEND_GT False
+#       #MODEL.MASK_ON False
+#       #MODEL.ROI_HEADS.POSITIVE_FRACTION 0.1
+
+#       #MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x.yaml
+#       #MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_clip_backbone_supervised/fpn/model_final.pth
+#       # MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x_ovd_FSD.yaml
+#       # MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco65_clip_backbone_supervised/fpn/model_final.pth
+
+#     - python3 ./tools/train_net.py
+#       --num-gpus 16
+#       --eval-only
+#       --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_supclipfpnrpn_temp001_ourclipcc3m600k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_clip_backbone_supervised/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+#       SOLVER.WARMUP_ITERS 5000
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.CLIP.MULTIPLY_RPN_SCORE True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.02
+#       MODEL.MASK_ON True
+      
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+# exp: CLIPFastRCNN LVIS openset training with RoIAlign to extract region features (GT / RPN regions) and offline localization module
+search:
+  job_template:
+    name: train_CLIPfastrcnn_rn50_openset_strongfpn400eprpn_866ids_08bgloss_ourcliprn50x4ckpt460k
+    #name: train_CLIPfastrcnn_rn50_openset_openbaselinefpnrpn_866ids_08bgloss_ourclipcc3m600kcc6790emb_3x
+    #name: test_CLIPfastrcnn_rn50_openset_openbaselinefpnrpn_866ids_08bgloss_ourclipglbimgcntrstkllr0001
+    sku: G16 # G8 # G1 # 
+    sku_count: 1
+    command:
+    - nvidia-smi
+    - bash install.sh
+    - ulimit -n 64000
+    - python3 ./tools/train_net.py
+      --num-gpus 16
+      --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+      MODEL.WEIGHTS /mnt/output_storage/results/dpretrain_frzt2_b96_glbimg_cntrstkl_exp639_lr0002_cc3m_600k_teacherrn50x4_studentrn50x4/model_0459999.pth
+      OUTPUT_DIR /mnt/output_storage/results/train_CLIPfastrcnn_rn50_openset_strongfpn400eprpn_866ids_08bgloss_ourcliprn50x4ckpt460k
+      MODEL.CLIP.CROP_REGION_TYPE RPN
+      MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+      MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/results/train_mask_rcnn_R_50_FPN_rpnonly_400ep_bs256_LSJ_LVIS_2nodes_16gpus/model_final.pth
+      MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+      MODEL.ROI_HEADS.NUM_CLASSES 866
+      MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_866_base_cls_emb_notnorm_rn50x4.pth
+      MODEL.CLIP.NO_BOX_DELTA False
+      SOLVER.IMS_PER_BATCH {ims_per_batch}
+      DATALOADER.NUM_WORKERS {num_workers}
+      SOLVER.BASE_LR 0.002
+      SOLVER.WARMUP_ITERS 5000
+      MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+      MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK True
+      MODEL.CLIP.BG_CLS_LOSS_WEIGHT 0.8
+      MODEL.CLIP.OPENSET_TEST_NUM_CLASSES 1203
+      MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm_rn50x4.pth
+      MODEL.CLIP.CLSS_TEMP 0.01
+      TEST.EVAL_PERIOD 75000
+      MODEL.CLIP.OFFLINE_RPN_LSJ_PRETRAINED True
+      MODEL.RESNETS.DEPTH 200
+      MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+      MODEL.CLIP.TEXT_EMB_DIM 640
+      MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION 18
+      MODEL.RESNETS.RES2_OUT_CHANNELS 320
+      # MODEL.MASK_ON False
+      
+    #   #--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+    #   #MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+    #   #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_openset_openbaselinefpnrpn_866ids_08bgloss/model_final.pth
+    #   #MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_freezeat2_b48_2ndmatch_norm01thres_normtemp001_100of300regions_iou05_cntrstkl/model_0039999.pth
+
+    - python3 ./tools/train_net.py
+      --num-gpus 8
+      --config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml
+      --eval-only
+      MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_rn50_openset_strongfpn400eprpn_866ids_08bgloss_ourcliprn50x4ckpt460k/model_final.pth
+      MODEL.CLIP.CROP_REGION_TYPE RPN
+      MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+      MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/results/train_mask_rcnn_R_50_FPN_rpnonly_400ep_bs256_LSJ_LVIS_2nodes_16gpus/model_final.pth
+      MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+      MODEL.ROI_HEADS.NUM_CLASSES 866
+      MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_866_base_cls_emb_notnorm_rn50x4.pth
+      MODEL.CLIP.NO_BOX_DELTA False
+      SOLVER.IMS_PER_BATCH {ims_per_batch}
+      DATALOADER.NUM_WORKERS {num_workers}
+      SOLVER.BASE_LR 0.002
+      SOLVER.WARMUP_ITERS 5000
+      MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+      MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK True
+      MODEL.CLIP.BG_CLS_LOSS_WEIGHT 0.8
+      MODEL.CLIP.OPENSET_TEST_NUM_CLASSES 1203
+      MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb_notnorm_rn50x4.pth
+      MODEL.CLIP.CLSS_TEMP 0.01
+      MODEL.CLIP.MULTIPLY_RPN_SCORE True
+      MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.02
+      MODEL.CLIP.OFFLINE_RPN_LSJ_PRETRAINED True
+      MODEL.RESNETS.DEPTH 200
+      MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+      MODEL.CLIP.TEXT_EMB_DIM 640
+      MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION 18
+      MODEL.RESNETS.RES2_OUT_CHANNELS 320
+      # MODEL.MASK_ON False
+
+    submit_args:
+      container_args:
+        shm_size: 10240G
+  max_trials: 1
+  type: grid          
+  params:
+    - name: ims_per_batch
+      spec: discrete
+      values: [16]
+    - name: num_workers
+      spec: discrete
+      values: [4]
+
+# exp: CLIPFastRCNN COCO-48 training with RoIAlign to extract region features (GT / RPN regions) and offline localization module
+# search:
+#   job_template:
+#     name: train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k
+#     #name: train_CLIPfastrcnn_rn50_coco80_FSDc4rpnwomask_1bgloss_normtemp001_gammano_cliprn50x4
+#     #name: test_CLIPfastrcnn_rn50_FSDfpnrpn_005bgloss_notnormtemp_ourclip2ndlevelcntrstkl_lr0001
+#     sku: G16 # G1 # 
+#     sku_count: 1
+#     # aml_mpirun:
+#     #   process_count_per_node: 1
+#     #   # AML only supports: OpenMpi or IntelMpi
+#     #   communicator: "OpenMpi"
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     # train zero-shot detector, tested by target AP
+#     - python3 ./tools/train_net.py
+#       --num-gpus 16
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/dpretrain_frzt2_b96_glbimg_cntrstkl_exp639_lr0002_cc3m_600k_teacherrn50x4_studentrn50x4/model_0459999.pth
+#       OUTPUT_DIR /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.ROI_HEADS.NUM_CLASSES 48
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+#       SOLVER.WARMUP_ITERS 5000
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK True
+#       MODEL.CLIP.BG_CLS_LOSS_WEIGHT 0.2
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       TEST.EVAL_PERIOD 25000
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.FOCAL_SCALED_LOSS 0.5
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     # test all categories with RPN
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     # test all categories with GT
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     # test base categories with RPN
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testb.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     # test base categories with GT
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testb.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     # test target categories with RPN
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testt.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_17_target_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     # test target categories with GT
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testt.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfrcnn_rn50_coco48_FSDc4rpn_02bgloss_normtemp001_gamma05_ourcliprn50x4ckpt460k/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/c4/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm_rn50x4.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_17_target_cls_emb_notnorm_rn50x4.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       MODEL.RESNETS.DEPTH 200
+#       MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#       MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_coco48_FSDfpnrpn_005bgloss_notnormtemp_focallosssoftmaxgamma1/model_final.pth  @ original CLIP
+#     #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_coco48_FSDfpnrpn_005bgloss_notnormtemp_ourclipsumtxttemp1/model_final.pth   @ our 1st level
+#     #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_coco48_FSDfpnrpn_005bgloss_notnormtemp_ourclip2ndlevelcntrstkl/model_final.pth   @ our 2nd level
+#     #MODEL.WEIGHTS /mnt/output_storage/results/train_CLIP_fast_rcnn_resnet50_coco48_FSDfpnrpn_005bgloss_notnormtemp_ourclip2ndlevelcntrstkl_lr0001/model_final.pth   @ our 2nd level with half lr
+
+
+#     # train COCO-80 supervised detector, tested by all AP
+#     # - python3 ./tools/train_net.py
+#     #   --num-gpus 16
+#     #   --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_coco80.yaml
+#     #   MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/teacher_RN50x4_student_RN50x4_OAI_CLIP.pth
+#     #   OUTPUT_DIR /mnt/output_storage/results/train_CLIPfastrcnn_rn50_coco80_FSDc4rpnwomask_1bgloss_normtemp001_gammano_cliprn50x4
+#     #   MODEL.CLIP.CROP_REGION_TYPE RPN
+#     #   MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x_ovd_FSD.yaml
+#     #   MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco80/c4/model_final.pth
+#     #   MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#     #   MODEL.ROI_HEADS.NUM_CLASSES 80
+#     #   MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_80_cls_emb_notnorm_rn50x4.pth
+#     #   MODEL.CLIP.NO_BOX_DELTA False
+#     #   SOLVER.IMS_PER_BATCH {ims_per_batch}
+#     #   DATALOADER.NUM_WORKERS {num_workers}
+#     #   SOLVER.BASE_LR 0.002
+#     #   SOLVER.WARMUP_ITERS 5000
+#     #   MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG False
+#     #   MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK True
+#     #   MODEL.CLIP.BG_CLS_LOSS_WEIGHT 1.0
+#     #   MODEL.MASK_ON False
+#     #   TEST.EVAL_PERIOD 25000
+#     #   MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#     #   MODEL.CLIP.FOCAL_SCALED_LOSS None
+#     #   MODEL.CLIP.CLSS_TEMP 0.01
+#     #   MODEL.RESNETS.DEPTH 200
+#     #   MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION 18
+#     #   MODEL.CLIP.TEXT_EMB_DIM 640
+
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+# exp: CLIPFastRCNN COCO-48 training with pretrained C4 backbone and FPN detector backbone
+# search:
+#   job_template:
+#     name: train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool
+#     sku: G16 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     # train zero-shot detector
+#     - python3 ./tools/train_net.py
+#       --num-gpus 16
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/trained_models/our_regionclip_weights/cc3m600kcc6790emb/model_final.pth
+#       OUTPUT_DIR /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.ROI_HEADS.NUM_CLASSES 48
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+#       SOLVER.WARMUP_ITERS 5000
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK True
+#       MODEL.CLIP.BG_CLS_LOSS_WEIGHT 0.2
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       TEST.EVAL_PERIOD 25000
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.FOCAL_SCALED_LOSS 0.5
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # test all categories with RPN
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd_testall.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # test all categories with GT
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd_testall.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # test base categories with RPN
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd_testb.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # test base categories with GT
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd_testb.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # test target categories with RPN
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd_testt.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_17_target_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     # test target categories with GT
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_FPN_ovd_testt.yaml
+#       --eval-only
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_CLIPfastrcnn_coco48_FSDfpnrpn_02bglss_nmtp001_gm05_fpnarch_ourclipcc3m600kcc6790emb_frzattpool/model_final.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_coco48_FSD/fpn/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA False
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_17_target_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.CLSS_TEMP 0.01
+
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+# exp: CLIPFastRCNN zeroshot inference on COCO with RoIAlign to extract region features (GT / RPN regions)
+# search:
+#   job_template:
+#     name: test_zeroshotinf_rn50_coco65_lvisopenbaselinefpnrpn_ourclipglbimgcntrstkl
+#     sku: G4 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --eval-only
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+    
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --eval-only
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.CLIP.CLSS_TEMP 0.1
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --eval-only
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE GT
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.CLIP.CLSS_TEMP 1.0
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --eval-only
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.CLIP.CLSS_TEMP 1.0
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --eval-only
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.CLIP.CLSS_TEMP 0.1
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+
+#     - python3 ./tools/train_net.py
+#       --num-gpus 4
+#       --eval-only
+#       --config-file ./configs/COCO-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_ovd_testall.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth
+#       MODEL.CLIP.CROP_REGION_TYPE RPN
+#       MODEL.CLIP.IMS_PER_BATCH_TEST 8
+#       MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+#       MODEL.CLIP.BB_RPN_WEIGHTS /mnt/output_storage/trained_models/mrcnn_openset/model_final.pth
+#       MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_48_base_cls_emb_notnorm.pth
+#       MODEL.CLIP.NO_BOX_DELTA True
+#       MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/coco_65_cls_emb_notnorm.pth
+#       MODEL.MASK_ON False
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       MODEL.ROI_HEADS.SCORE_THRESH_TEST 0.001
+#       MODEL.CLIP.OFFLINE_RPN_NMS_THRESH 0.9
+#       MODEL.CLIP.CLSS_TEMP 0.01
+#       #MODEL.CLIP.MULTIPLY_RPN_SCORE True
+
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+# MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192/model_0029999.pth  @ sumtxt
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_avgtxt/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_avgtxt/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b64_avgtxt_nms05region50/model_0039999.pth
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_maxeot_temp10/model_0034999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_maxeot_temp1/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_maxeot_temp01/model_0034999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_softmaxtxt_temp10/model_0034999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_softmaxtxt_temp1/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_softmaxtxt_temp1/model_0019999.pth  @ resume training to get 2nd ckpt below
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_sumtxt_temp1/model_0039999.pth @ best so far
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_maxeot_temp1/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_softmaxtxt_temp1/model_0019999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b128_sumtxt_temp10/model_0024999.pth  @ resume training to get this 2nd ckpt
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_sumtxt_temp1_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_sumtxt_temp10_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_avgtxt_temp1_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_softmaxtxt_temp1_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_maxeot_temp1_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b48_maxeot_temp10_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_sumtxt_temp10_gridfeat/model_0024999.pth  @ resume training to get this 2nd ckpt
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b192_sumtxt_temp10_grid16/model_0034999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b64_sumtxt_temp10_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat2_b96_sumtxt_temp10_gather/model_0024999.pth
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat0_b192_sumtxt_temp10/model_0029999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat0_b64_sumtxt_temp10_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat0_b48_sumtxt_temp10_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat0_b48_avgtxt_temp1_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat0_b48_softmaxtxt_temp1_gather/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_resnet50_coco_freezeat0_b48_maxeot_temp10_gather/model_0039999.pth
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_sumtxt_temp10_2ndmatch_09thres_temp10/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_maxeot_temp10_2ndmatch_09thres_temp10/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp10/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp1/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp01/model_0039999.pth
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b64_noimgtxt_2ndmatch_09thres_temp10/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_095thres_temp10/model_0039999.pth 
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_075thres_temp10/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp10_bipathloss/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp10_initbyourclip/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b96_noimgtxt_2ndmatch_09thres_temp10_regions50/model_0029999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp10_rpnweights/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat0_b48_noimgtxt_2ndmatch_09thres_temp10/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b128_noimgtxt_2ndmatch_09thres_temp10_regions20/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_temp10_focalweightsgamma1/model_0039999.pth
+
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_09thres_normtemp001/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_norm01thres_normtemp001/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b64_noimgtxt_2ndmatch_norm01thres_normtemp001/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_norm01thres_normtemp001_avgmilloss/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_fastrcnn_rn50_coco_freezeat2_b48_noimgtxt_2ndmatch_norm01thres_normtemp001_softmilloss/model_0039999.pth
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_freezeat2_b48_2ndmatch_norm01thres_normtemp001_100of300regions_iou05_cntrstkl/model_0039999.pth @ cntrstkl, best so far
+# MODEL.WEIGHTS /mnt/output_storage/results/pretrain_rn50_frzt2_b48_glbimgmaxeotnormgather_cntrstkl_norm01thres_normtemp001_100of300regions_iou05/model_0039999.pth @ glbimg + cntrstkl, best so far
+
+
+# exp: train LVIS/COCO close-set Mask RCNN, with FPN/C4 backbone initialized by ImageNet vs. CLIP vs. random init 
+# search:
+#   job_template:
+#     name: train_mask_rcnn_resnet50_CLIP_coco65_FPN_8gpu
+#     sku: G8 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     - python3 ./tools/train_net.py
+#       --num-gpus 8
+#       --config-file ./configs/COCO-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x_ovd_FSD.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+#       OUTPUT_DIR /mnt/output_storage/results/train_mask_rcnn_resnet50_CLIP_coco65_FPN_8gpu
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+#       #MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER True
+#       #MODEL.CLIP.TEXT_EMB_PATH /mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb.pth
+#       # MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG True
+#       # MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK True
+      
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_C4_1x.yaml
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x.yaml
+#       #--config-file ./configs/COCO-InstanceSegmentation/mask_rcnn_CLIP_R_50_C4_1x.yaml
+#       #--config-file ./configs/COCO-InstanceSegmentation/mask_rcnn_CLIP_R_50_C4_1x_ovd_FSD.yaml
+#       #--config-file ./configs/COCO-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x_ovd_FSD.yaml
+#       #MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/RN50_OAI_CLIP.pth
+#       #MODEL.WEIGHTS /mnt/output_storage/trained_models/oai_clip_weights/VITB32_OAI_CLIP.pth
+#       #OUTPUT_DIR /mnt/output_storage/results/train_mask_rcnn_resnet50_CLIP_gpus8_bs16_lr0.002_1x
+
+#       #MODEL.BACKBONE.FREEZE_AT 0
+#       #SOLVER.WEIGHT_DECAY 0.001
+#       #SOLVER.CLIP_GRADIENTS.ENABLED True  SOLVER.CLIP_GRADIENTS.CLIP_VALUE 1.0 
+
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
+
+
+# exp: test pretrained backbone & RPN
+# search:
+#   job_template:
+#     name: test_rpn_mask_rcnn_resnet50_CLIP_e1-3-5
+#     sku: G8 # G1 # 
+#     sku_count: 1
+#     command:
+#     - nvidia-smi
+#     - bash install.sh
+#     - ulimit -n 64000
+#     - python3 ./tools/train_net.py
+#       --num-gpus {num_gpus}
+#       --eval-only
+#       --config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x.yaml
+#       MODEL.WEIGHTS /mnt/output_storage/results/train_mask_rcnn_resnet50_CLIP_gpus8_bs16_lr0.002_1x_txtembclsfierwbias_temp0.1/model_final.pth
+#       OUTPUT_DIR /mnt/output_storage/results/test_rpn_mask_rcnn_resnet50_CLIP_e1-3-5
+#       SOLVER.IMS_PER_BATCH {ims_per_batch}
+#       DATALOADER.NUM_WORKERS {num_workers}
+#       SOLVER.BASE_LR 0.002
+#       MODEL.META_ARCHITECTURE ProposalNetwork
+#       # MODEL.RPN.NMS_THRESH 0.9
+#       # MODEL.ROI_HEADS.NMS_THRESH_TEST 0.6
+
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_C4_1x.yaml
+#       #--config-file ./configs/LVISv1-InstanceSegmentation/mask_rcnn_CLIP_R_50_FPN_1x.yaml
+
+#     submit_args:
+#       container_args:
+#         shm_size: 10240G
+#   max_trials: 1
+#   type: grid          
+#   params:
+#     - name: num_gpus
+#       spec: discrete
+#       values: [8]
+#     - name: ims_per_batch
+#       spec: discrete
+#       values: [16]
+#     - name: num_workers
+#       spec: discrete
+#       values: [4]
