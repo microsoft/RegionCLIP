@@ -16,7 +16,7 @@ from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import torch
 import torch.utils.data as data
-from .oscar_tsv import InputExample, convert_example_to_features
+from .clip_tsv import InputExample, convert_example_to_features
 from detectron2.structures.tsv_file import TSVFile, CompositeTSVFile
 from detectron2.data.clip_datasets.clip_prompt_engineering import get_prompt_templates, prompt_engineering
 #import spacy
@@ -27,11 +27,7 @@ def pre_fetch(tsv_filename: str):
         logging.info('Pre-loading %s ended.' % tsv_filename)
 
 class CLIPImgTxtPairTSVDataset(data.Dataset):
-    """
-        This class is intended for encapsulating Image/Text pair data for contrastive learning described in
-        the following paper,
-        "Learning Transferable Visual Models From Natural Language Supervision" (a.k.a CLIP)
-        Specifically, it is used to accomadate the tsv data format from Azure Cognition Service Group.
+    """ This class is intended for encapsulating Image/Text pair data for contrastive learning.
     """
     def __init__(self,
                  image_tsv_file: Union[str, List[str]],
@@ -61,7 +57,6 @@ class CLIPImgTxtPairTSVDataset(data.Dataset):
         self.spacy_nlp = None # spacy.load('en_core_web_sm')
         
         self.class_selector = None
-        # self.class_selector = list(self.label2idx.keys()) if self.label2idx else None
 
         self.label2idx = {}
         self.idx2label = {}        

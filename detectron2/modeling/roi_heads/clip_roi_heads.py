@@ -28,10 +28,7 @@ from .roi_heads import ROI_HEADS_REGISTRY, select_foreground_proposals, ROIHeads
 class CLIPRes5ROIHeads(ROIHeads):
     """
     Created for CLIP ResNet. This head uses the last resnet layer from backbone.
-    The ROIHeads in a typical "C4" R-CNN model, where
-    the box and mask head share the cropping and
-    the per-region feature computation by a Res5 block.
-    See :paper:`ResNet` Appendix A.
+    Extended from Res5ROIHeads in roi_heads.py
     """
 
     @configurable
@@ -185,10 +182,7 @@ class CLIPRes5ROIHeads(ROIHeads):
 class PretrainRes5ROIHeads(ROIHeads):
     """
     Created for pretraining CLIP ResNet without box_predictor. This head uses the last resnet layer from backbone.
-    The ROIHeads in a typical "C4" R-CNN model, where
-    the box and mask head share the cropping and
-    the per-region feature computation by a Res5 block.
-    See :paper:`ResNet` Appendix A.
+    Extended from Res5ROIHeads in roi_heads.py
     """
 
     @configurable
@@ -259,22 +253,15 @@ class PretrainRes5ROIHeads(ROIHeads):
         """
         See :meth:`ROIHeads.forward`.
         """
-        # if self.training:
-        #     assert targets
-        #     proposals = self.label_and_sample_proposals(proposals, targets)
-        # del targets
-        if isinstance(proposals[0], Boxes): # grid boxes
-            proposal_boxes = proposals
-        else:  # object proposals
-            proposal_boxes = [x.proposal_boxes for x in proposals]
+        proposal_boxes = [x.proposal_boxes for x in proposals] # object proposals
         box_features = self._shared_roi_transform(
             [features[f] for f in self.in_features], proposal_boxes, res5
         )
         if attnpool:  # att pooling
             att_feats = attnpool(box_features)
-            region_feats = att_feats # self.box_predictor(att_feats)
+            region_feats = att_feats
         else: # mean pooling
-            region_feats = box_features.mean(dim=[2, 3]) # self.box_predictor(box_features.mean(dim=[2, 3]))
+            region_feats = box_features.mean(dim=[2, 3])
 
         return region_feats
 
@@ -301,14 +288,7 @@ class PretrainRes5ROIHeads(ROIHeads):
 class CLIPStandardROIHeads(ROIHeads):
     """
     Created for CLIP ResNet. This head uses the attention pool layers from backbone.
-    It's "standard" in a sense that there is no ROI transform sharing
-    or feature sharing between tasks.
-    Each head independently processes the input features by each head's
-    own pooler and head.
-
-    This class is used by most models, such as FPN and C5.
-    To implement more models, you can subclass it and implement a different
-    :meth:`forward()` or a head.
+    Extended from StandardROIHeads in roi_heads.py
     """
 
     @configurable

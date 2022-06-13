@@ -24,11 +24,11 @@ MODEL:
 INPUT:
   MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
 DATASETS:
-  TRAIN: ("yfcc100m",)
+  TRAIN: ("imgtxtpairs",)
   FACTORY_TRAIN: ("CLIPImgTxtPairTSVDataset",)
   PATH_TRAIN: ("/home/v-yiwuzhong/projects/azureblobs/vlpdatasets/coco-caption/val2017",) # ("/home/v-yiwuzhong/projects/azureblobs/vlpdatasets/CC3M-filtered/0/images.tsv",) # ("/home/v-yiwuzhong/projects/azureblobs/vlpdatasets/yfcc100m/val",)
   TEST: () 
-  # TEST: ("yfcc100m",) # () # ("imagenet",)
+  # TEST: ("imgtxtpairs",) # () # ("imagenet",)
   # FACTORY_TEST: ("CLIPImgTxtPairTSVDataset",) # ("CLIPImgTSVDataset",)
   # PATH_TEST: ("/home/v-yiwuzhong/projects/azureblobs/vlpdatasets/flickr30k_entities_tsv/entities_test",) # ("/home/v-yiwuzhong/projects/azureblobs/vlpdatasets/imagenet-tsv/val.tsv",)
 DATALOADER:

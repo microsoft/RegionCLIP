@@ -122,7 +122,7 @@
 python3 ./tools/train_net.py \
 --num-gpus 2 \
 --eval-only \
---config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4.yaml \
+--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_custom_img.yaml \
 MODEL.WEIGHTS /home/user/Desktop/RegionCLIP_data/data/dpretrain_frzt2_b96_glbimg_cntrstkl_exp639_lr0002_cc3m_600k_teacherrn50x4_studentrn50x4/model_final.pth \
 MODEL.CLIP.CROP_REGION_TYPE RPN \
 MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \

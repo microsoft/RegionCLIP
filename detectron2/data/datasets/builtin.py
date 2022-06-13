@@ -56,13 +56,6 @@ _PREDEFINED_SPLITS_COCO["coco_ovd"] = {
     "coco_2017_ovd_t_test": ("coco/val2017", "coco/annotations/ovd_ins_val2017_t.json"),
 }
 
-# zeroshot inference of grounding evaluation
-_PREDEFINED_SPLITS_FLICKR30K = {}
-_PREDEFINED_SPLITS_FLICKR30K["yfcc100m"] = {
-    "flickr30k_train": ('flickr30k_images', "flickr30k_anno",  "split/train.txt"),
-    "flickr30k_val":   ('flickr30k_images', "flickr30k_anno",  "split/val.txt"),
-    "flickr30k_test":  ('flickr30k_images', "flickr30k_anno",  "split/test.txt"),
-}
 
 _PREDEFINED_SPLITS_COCO["coco_person"] = {
     "keypoints_coco_2014_train": (
@@ -171,25 +164,28 @@ def register_all_coco(root):
 
 # ==== Predefined datasets and splits for LVIS ==========
 
-def register_all_flickr30k():
-    MetadataCatalog.get('yfcc100m').set(evaluator_type="flickr30k")
-
-
-# ==== Predefined datasets and splits for LVIS ==========
-
 
 _PREDEFINED_SPLITS_LVIS = {
+    # openset setting
     "lvis_v1": {
         "lvis_v1_train": ("coco/", "lvis/lvis_v1_train.json"),
         "lvis_v1_val": ("coco/", "lvis/lvis_v1_val.json"),
         "lvis_v1_test_dev": ("coco/", "lvis/lvis_v1_image_info_test_dev.json"),
         "lvis_v1_test_challenge": ("coco/", "lvis/lvis_v1_image_info_test_challenge.json"),
     },
-    "lvis_v1_zeroshot": {
-        "lvis_v1_train_zeroshot": ("coco/", "lvis/lvis_v1_train.json"),
-        "lvis_v1_val_zeroshot": ("coco/", "lvis/lvis_v1_val.json"),
-        "lvis_v1_test_dev_zeroshot": ("coco/", "lvis/lvis_v1_image_info_test_dev.json"),
-        "lvis_v1_test_challenge_zeroshot": ("coco/", "lvis/lvis_v1_image_info_test_challenge.json"),
+    # custom image setting
+    "lvis_v1_custom_img": {
+        "lvis_v1_train_custom_img": ("coco/", "lvis/lvis_v1_train.json"),
+        "lvis_v1_val_custom_img": ("coco/", "lvis/lvis_v1_val.json"),
+        "lvis_v1_test_dev_custom_img": ("coco/", "lvis/lvis_v1_image_info_test_dev.json"),
+        "lvis_v1_test_challenge_custom_img": ("coco/", "lvis/lvis_v1_image_info_test_challenge.json"),
+    },
+    # regular fully supervised setting
+    "lvis_v1_fullysup": {
+        "lvis_v1_train_fullysup": ("coco/", "lvis/lvis_v1_train.json"),
+        "lvis_v1_val_fullysup": ("coco/", "lvis/lvis_v1_val.json"),
+        "lvis_v1_test_dev_fullysup": ("coco/", "lvis/lvis_v1_image_info_test_dev.json"),
+        "lvis_v1_test_challenge_fullysup": ("coco/", "lvis/lvis_v1_image_info_test_challenge.json"),
     },
     "lvis_v0.5": {
         "lvis_v0.5_train": ("coco/", "lvis/lvis_v0.5_train.json"),
@@ -207,11 +203,18 @@ _PREDEFINED_SPLITS_LVIS = {
 def register_all_lvis(root):
     for dataset_name, splits_per_dataset in _PREDEFINED_SPLITS_LVIS.items():
         for key, (image_root, json_file) in splits_per_dataset.items():
+            if dataset_name == "lvis_v1":
+                args = {'filter_open_cls': True, 'run_custom_img': False}
+            elif dataset_name == 'lvis_v1_custom_img':
+                args = {'filter_open_cls': False, 'run_custom_img': True}
+            elif dataset_name == 'lvis_v1_fullysup':
+                args = {'filter_open_cls': False, 'run_custom_img': False}
             register_lvis_instances(
                 key,
                 get_lvis_instances_meta(dataset_name),
                 os.path.join(root, json_file) if "://" not in json_file else json_file,
                 os.path.join(root, image_root),
+                args,
             )
 
 
@@ -299,4 +302,3 @@ if __name__.endswith(".builtin"):
     register_all_cityscapes_panoptic(_root)
     register_all_pascal_voc(_root)
     register_all_ade20k(_root)
-    register_all_flickr30k()

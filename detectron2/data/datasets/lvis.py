@@ -13,6 +13,7 @@ from .lvis_v1_categories import LVIS_CATEGORIES as LVIS_V1_CATEGORIES
 
 import torch
 import numpy as np
+from PIL import Image
 """
 This file contains functions to parse LVIS-format annotations into dicts in the
 "Detectron2 format".
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["load_lvis_json", "register_lvis_instances", "get_lvis_instances_meta"]
 
 
-def register_lvis_instances(name, metadata, json_file, image_root):
+def register_lvis_instances(name, metadata, json_file, image_root, args=None):
     """
     Register a dataset in LVIS's json annotation format for instance detection and segmentation.
 
@@ -33,13 +34,18 @@ def register_lvis_instances(name, metadata, json_file, image_root):
         json_file (str): path to the json instance annotation file.
         image_root (str or path-like): directory which contains all the images.
     """
-    DatasetCatalog.register(name, lambda: load_lvis_json(json_file, image_root, name))
+    if args is not None:
+        filter_open_cls = args['filter_open_cls']
+        run_custom_img = args['run_custom_img']
+
+    DatasetCatalog.register(name, lambda: load_lvis_json(json_file, image_root, name, \
+        filter_open_cls=filter_open_cls, run_custom_img=run_custom_img))
     MetadataCatalog.get(name).set(
         json_file=json_file, image_root=image_root, evaluator_type="lvis", **metadata
     )
 
 
-def load_lvis_json_original(json_file, image_root, dataset_name=None, filter_open_cls=True, clip_gt_crop=True, max_gt_per_img=500):
+def load_lvis_json(json_file, image_root, dataset_name=None, filter_open_cls=False, clip_gt_crop=True, max_gt_per_img=500, run_custom_img=False):
     """
     Load a json file in LVIS's annotation format.
 
@@ -49,9 +55,8 @@ def load_lvis_json_original(json_file, image_root, dataset_name=None, filter_ope
         dataset_name (str): the name of the dataset (e.g., "lvis_v0.5_train").
             If provided, this function will put "thing_classes" into the metadata
             associated with this dataset.
-        filter_open_cls: open-set setting, filter the open-set categories during training
-        clip_gt_crop: must filter images with empty annotations or too many GT bbox,
-                      even if in testing (eg, use CLIP on GT regions)
+        filter_open_cls: open-set setting, filter the rare (novel) categories during training
+        clip_gt_crop: whether apply CLIP on GT regions; must filter images with empty annotations or too many GT bbox
     Returns:
         list[dict]: a list of dicts in Detectron2 standard format. (See
         `Using Custom Datasets </tutorials/datasets.html>`_ )
@@ -60,9 +65,12 @@ def load_lvis_json_original(json_file, image_root, dataset_name=None, filter_ope
         1. This function does not read the image files.
            The results do not have the "image" field.
     """
+    if run_custom_img:
+        return load_lvis_custom_img()
+    
     from lvis import LVIS
 
-    if 'train' in dataset_name: #'zeroshot' in dataset_name and 'train' in dataset_name:  # openset setting, filter the novel classes during training
+    if 'train' in dataset_name and filter_open_cls: # openset training setting, filter the novel classes during training
         filter_open_cls = True
     else:
         filter_open_cls = False
@@ -125,22 +133,12 @@ def load_lvis_json_original(json_file, image_root, dataset_name=None, filter_ope
     dataset_dicts = []
     cls_type_dict = {cls_meta['id']: cls_meta['frequency'] for cls_meta in lvis_api.dataset['categories']} # map cls id to cls type
     area_dict = {'r': [], 'c': [], 'f': []}  # calculate box area for each type of class
-    # import os
-    # from PIL import Image
-    # custom_img_path = 'datasets/epic_sample_frames'
-    # custom_img_list = [os.path.join(custom_img_path, item) for item in os.listdir(custom_img_path)]
-    # cnt = 0
+
     for (img_dict, anno_dict_list) in imgs_anns:
         record = {}
         record["file_name"] = get_file_name(image_root, img_dict)
-        # record["file_name"] = custom_img_list[cnt]; cnt += 1; 
-        # if cnt == 46: 
-        #     break # get_file_name(image_root, img_dict)
-        # img_file = Image.open(record["file_name"])
         record["height"] = img_dict["height"]
         record["width"] = img_dict["width"]
-        # record["height"] = img_file.size[1] # img_dict["height"]
-        # record["width"] = img_file.size[0] # img_dict["width"]
         record["not_exhaustive_category_ids"] = img_dict.get("not_exhaustive_category_ids", [])
         record["neg_category_ids"] = img_dict.get("neg_category_ids", [])
         image_id = record["image_id"] = img_dict["id"]
@@ -159,6 +157,7 @@ def load_lvis_json_original(json_file, image_root, dataset_name=None, filter_ope
             else:
                 obj["category_id"] = anno["category_id"] - 1  # Convert 1-indexed to 0-indexed
             obj['frequency'] = cls_type_dict[anno["category_id"]]  # used for open-set filtering
+
             if filter_open_cls:  # filter categories for open-set training
                 if obj['frequency'] == 'r':
                     continue
@@ -193,30 +192,20 @@ def load_lvis_json_original(json_file, image_root, dataset_name=None, filter_ope
                 obj['category_id'] = old_to_new[obj['category_id']]  # 0-indexed id
                 assert obj['frequency'] != 'r'
         logger.info("\n\nModel will be trained in the open-set setting! {} / {} categories are kept.\n".format(len(old_to_new),len(cls_type_dict)))
-    # calculate box area for each type of class
-    area_lst = np.array([0, 400, 1600, 2500, 5000, 10000, 22500, 224 * 224, 90000, 160000, 1e8])
-    # rare_cls = np.histogram(np.array(area_dict['r']), bins=area_lst)[0]
-    # common_cls = np.histogram(np.array(area_dict['c']), bins=area_lst)[0]
-    # freq_cls = np.histogram(np.array(area_dict['f']), bins=area_lst)[0]
-    # print("rare classes: {}; \ncommon classes: {}; \nfrequent classes: {}".format(rare_cls/rare_cls.sum()*100, common_cls/common_cls.sum()*100, freq_cls/freq_cls.sum()*100))
-    # # apply CLIP on GT regions: some images has large number of GT bbox (eg, 759), remove them, otherwise, OOM
+
+    # apply CLIP on GT regions: some images has large number of GT bbox (eg, 759), remove them, otherwise, OOM
     if clip_gt_crop:  
-        # len_num = sorted([len(item["annotations"]) for item in dataset_dicts], reverse=True)
         dataset_dicts = sorted(dataset_dicts, key=lambda x: len(x["annotations"]), reverse=True)
         for record in dataset_dicts:
-            record["annotations"] = record["annotations"][:max_gt_per_img]  # only <10 / 20k images in test have >300 GT boxes
-        #dataset_dicts = sorted(dataset_dicts, key=lambda x: len(x["annotations"]))[:12]  #[12000:14000]  # 
-    #dataset_dicts = sorted(dataset_dicts, key=lambda x: len(x["annotations"]))[-1200:-1000]
-    #eval_cls_acc(dataset_dicts, area_lst)
+            record["annotations"] = record["annotations"][:max_gt_per_img]  # only <10 per 20k images in test have >300 GT boxes
+    
     return dataset_dicts
 
-def load_lvis_json(json_file, image_root, dataset_name=None, filter_open_cls=True, clip_gt_crop=True, max_gt_per_img=500, custom_img_path='datasets/custom_images'):
+def load_lvis_custom_img(custom_img_path='datasets/custom_images'):
     """
     This is a tentitive function for loading custom images.
     Given a folder of images (eg, 'datasets/custom_images'), load their meta data into a dictionary
     """
-    import os
-    from PIL import Image
     custom_img_list = [os.path.join(custom_img_path, item) for item in os.listdir(custom_img_path)]
 
     dataset_dicts = []
@@ -231,55 +220,6 @@ def load_lvis_json(json_file, image_root, dataset_name=None, filter_open_cls=Tru
         dataset_dicts.append(record)
     
     return dataset_dicts
-
-def eval_cls_acc(dataset_dicts, area_lst):
-    #pred_file = '/home/v-yiwuzhong/projects/detectron2-open-set/output/rcnn_gt_crop/vit/instances_predictions.pth'
-    #pred_file = '/home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/test_CLIP_rcnn_resnet50_crop_regions_perclassnms/inference/instances_predictions.pth'
-    #pred_file = '/home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/test_CLIP_rcnn_vitb32_crop_regions_perclassnms/inference/instances_predictions.pth'
-    #pred_file = '/home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/test_CLIP_fast_rcnn_resnet50_roifeatmap/inference/instances_predictions.pth'
-    #pred_file = '/home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/test_CLIP_fast_rcnn_resnet50_supmrcnnbaselinefpn/inference/instances_predictions.pth'
-    #pred_file = '/home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/test_CLIP_fast_rcnn_resnet50_supmrcnnbaselinec4/inference/instances_predictions.pth'
-    pred_file = '/home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/test_CLIP_fast_rcnn_resnet50_e1-3-3gtbox/inference/instances_predictions.pth'
-    predictions = torch.load(pred_file)
-    correct = 0
-    wrong = 0
-    area_threshold = area_lst[1:-1] # np.array([400, 1600, 2500, 5000, 10000, 22500, 224 * 224, 90000, 160000])
-    acc_list = [[0, 0] for i in range(area_threshold.shape[0] + 1)]
-    small_cnt = 0
-    for preds, gts in zip(predictions, dataset_dicts):
-        assert preds['image_id'] == gts['image_id']  # same image 
-        #assert len(preds['instances']) == len(gts['annotations'])
-        box_seen = {}  # keep a set for the predicted boxes that have been checked
-        for pred, gt in zip(preds['instances'], gts['annotations']):
-            if pred['bbox'][0] in box_seen: # duplicate box due to perclass NMS
-                continue
-            else:
-                box_seen[pred['bbox'][0]] = 1
-            if np.sum(np.array(pred['bbox']) - np.array(gt['bbox'])) < 1.0:  # same box
-                pass
-            else: # has been NMS and shuffled
-                for gt in gts['annotations']:
-                    if np.sum(np.array(pred['bbox']) - np.array(gt['bbox'])) < 1.0: # same box
-                        break
-            assert np.sum(np.array(pred['bbox']) - np.array(gt['bbox'])) < 1.0  # same box
-            this_area = gt['bbox'][2] * gt['bbox'][3]
-            block = (area_threshold < this_area).nonzero()[0].shape[0]
-            if pred['category_id'] == gt['category_id']:  # matched
-                correct += 1
-                acc_list[block][0] += 1
-            else:
-                wrong += 1
-                acc_list[block][1] += 1
-    
-    print("\n\nGot correct {} and wrong {}. Accuracy is {} / {} = {}\n\n".format(correct,wrong,correct,correct+wrong,correct/(correct+wrong)))
-    block_acc = [100 * acc_list[i][0] / (acc_list[i][0] + acc_list[i][1]) for i in range(len(acc_list))]
-    block_acc = [round(i, 1) for i in block_acc]
-    print("Block accuracy: {}".format(block_acc))
-    block_num = [acc_list[i][0] + acc_list[i][1] for i in range(len(acc_list))]
-    block_num = list(block_num / np.sum(block_num) * 100)
-    block_num = [round(i, 1) for i in block_num]
-    print("Block #instances: {}".format(block_num))
-    return
 
 def get_lvis_instances_meta(dataset_name):
     """

@@ -116,10 +116,6 @@ class DatasetMapper:
                 if is_train
                 else cfg.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TEST
             )
-        # open-set setting, filter the open-set categories during training
-        # filter_open_cls = cfg.SOLVER.IMS_PER_BATCH < 10  # debug
-        # if filter_open_cls:
-        #     ret["filter_open_cls"] = True
         # CLIP inference on cropped image regions
         if cfg.MODEL.META_ARCHITECTURE in ["CLIPRCNN", "CLIPFastRCNN"]:
             ret["clip_crop"] = True
@@ -146,9 +142,7 @@ class DatasetMapper:
 
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         transforms = self.augmentations(aug_input)
-        # if self.clip_crop:  # load original images into CLIP model, without resizing
-        #     pass
-        # else:
+
         image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
         image_shape = image.shape[:2]  # h, w
@@ -176,14 +170,6 @@ class DatasetMapper:
                 return dataset_dict
 
         if "annotations" in dataset_dict:
-            # if self.filter_open_cls: # filter categories for open-set training
-            #     obj_annos = dataset_dict['annotations']
-            #     clean_obj_annos = [obj_anno for obj_anno in obj_annos if obj_anno['frequency'] != 'r']  # filter rare classes
-            #     if len(clean_obj_annos) == 0:  # empty annotation
-            #         print("\n\nImage {} has no annotation after filtering open-set classes!\n\n".format(dataset_dict['image_id']))
-            #         clean_obj_annos = obj_annos[0]  # keep one for compatability, fix it later
-            #     dataset_dict['annotations'] = clean_obj_annos
-
             # USER: Modify this if you want to keep them for some reason.
             for anno in dataset_dict["annotations"]:
                 if not self.use_instance_mask:

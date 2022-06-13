@@ -209,7 +209,7 @@ _C.MODEL.CLIP.MULTIPLY_RPN_SCORE = False  # if True, during inference, multiply 
 _C.MODEL.CLIP.OPENSET_TEST_NUM_CLASSES = None  # if an integer, it is #all_cls in test
 _C.MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH = None # if not None, enables the openset/zero-shot training, the category embeddings during test
 
-_C.MODEL.CLIP.CLSS_TEMP = None # if None, dot product wo normalization & temperature; if float, normalization plus temperature
+_C.MODEL.CLIP.CLSS_TEMP = 0.01 # normalization + dot product + temperature
 _C.MODEL.CLIP.RUN_CVPR_OVR = False # if True, train CVPR OVR model with their text embeddings
 _C.MODEL.CLIP.FOCAL_SCALED_LOSS = None # if not None (float value for gamma), apply focal loss scaling idea to standard cross-entropy loss
 

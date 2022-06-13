@@ -308,7 +308,7 @@ def build_batch_data_loader(
 
 
 def _train_loader_from_config(cfg, mapper=None, *, dataset=None, sampler=None):
-    if 'yfcc100m' in cfg.DATASETS.TRAIN:  # dataset, transform/aug., sampler for image-text pairs training
+    if 'imgtxtpairs' in cfg.DATASETS.TRAIN:  # dataset, transform/aug., sampler for image-text pairs training
         logger = logging.getLogger(__name__)
         logger.info("Creating dataset {}".format(cfg.DATASETS.TRAIN))
         datasets, precomputed_tokens, dataset_classes = make_clip_dataset(
@@ -429,7 +429,7 @@ def _test_loader_from_config(cfg, dataset_name, mapper=None):
     Uses the given `dataset_name` argument (instead of the names in cfg), because the
     standard practice is to evaluate each test set individually (not combining them).
     """
-    if 'yfcc100m' in cfg.DATASETS.TEST:  # dataset, no {transform/aug., sampler for image-text pairs training}
+    if 'imgtxtpairs' in cfg.DATASETS.TEST:  # dataset, no {transform/aug., sampler for image-text pairs training}
         logger = logging.getLogger(__name__)
         logger.info("Creating dataset {}".format(cfg.DATASETS.TEST))
         datasets, precomputed_tokens, dataset_classes = make_clip_dataset(

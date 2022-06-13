@@ -1,6 +1,6 @@
 _BASE_: "./clip_resnet_yfcc_debug.yaml"
 DATASETS:
-  TRAIN: ("yfcc100m",)
+  TRAIN: ("imgtxtpairs",)
   FACTORY_TRAIN: ("CLIPImgTxtPairTSVDataset",)
   PATH_TRAIN: ("/mnt/data_storage/coco-caption/train2017",) # ("/home/v-yiwuzhong/projects/azureblobs/vlpdatasets/yfcc100m/val",)
   # TEST: ("imagenet",)

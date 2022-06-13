@@ -1,6 +1,6 @@
 _BASE_: "./clip_resnet_yfcc_debug.yaml"
 DATASETS:
-  TRAIN: ("yfcc100m",)
+  TRAIN: ("imgtxtpairs",)
   FACTORY_TRAIN: ("CLIPImgTxtPairTSVDataset",)
   PATH_TRAIN: ("/tmp/datasets/CC3M",) # ("/mnt/data_storage/CC3M-filtered/CC3M",) # ("/mnt/data_storage/CC3M-filtered/CC1M_0123",) # ("/mnt/data_storage/CC3M-filtered/CC2M_01234567",) # 
 SOLVER: # refer to cvpr ovr

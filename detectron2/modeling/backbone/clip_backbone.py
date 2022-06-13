@@ -664,7 +664,7 @@ def build_resnet_clip(cfg, input_shape):
 @BACKBONE_REGISTRY.register()
 def build_clip_resnet_backbone(cfg, input_shape):
     """
-    Create a CLIP ResNet instance from config.
+    Create a CLIP-version ResNet instance from config.
 
     Returns:
         ModifiedResNet: a :class:`ModifiedResNet` instance.

@@ -30,17 +30,12 @@ def build_clip_transforms(cfg, is_train=True):
 
         return transforms
 
-    # normalize_transform = T.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-    # assert isinstance(cfg.DATASET.OUTPUT_SIZE, (list, tuple)), 'DATASET.OUTPUT_SIZE should be list or tuple'
-    # NOTE: normalization is applied in rcnn.py, to keep consistent as Detectron2
-    # normalize = T.Normalize(mean=cfg.MODEL.PIXEL_MEAN, std=cfg.MODEL.PIXEL_STD) # T.Normalize(mean=cfg.INPUT.PIXEL_MEAN, std=cfg.INPUT.PIXEL_STD)
-
     transforms = None
     if is_train:
         aug = cfg.AUG
         scale = aug.SCALE
         ratio = aug.RATIO 
-        if len(cfg.AUG.TRAIN.IMAGE_SIZE) == 2:  # Data Augmentation from MSR-CLIP 
+        if len(cfg.AUG.TRAIN.IMAGE_SIZE) == 2:
             ts = [
                 T.RandomResizedCrop(
                     cfg.AUG.TRAIN.IMAGE_SIZE[0], scale=scale, ratio=ratio,
@@ -57,33 +52,10 @@ def build_clip_transforms(cfg, is_train=True):
                 T.RandomHorizontalFlip(),
             ]
 
-        cj = aug.COLOR_JITTER
-        if cj[-1] > 0.0:
-            ts.append(T.RandomApply([T.ColorJitter(*cj[:-1])], p=cj[-1]))
-
-        gs = aug.GRAY_SCALE
-        if gs > 0.0:
-            ts.append(T.RandomGrayscale(gs))
-
-        gb = aug.GAUSSIAN_BLUR
-        if gb > 0.0:
-            ts.append(T.RandomApply([GaussianBlur([.1, 2.])], p=gb))
-
         ts.append(T.ToTensor())
-        # NOTE: normalization is applied in rcnn.py, to keep consistent as Detectron2
-        #ts.append(normalize)
-
         transforms = T.Compose(ts)
     else:
-        # for zeroshot inference of grounding evaluation
-        transforms = T.Compose([
-            T.Resize(
-                cfg.AUG.TEST.IMAGE_SIZE[0],
-                interpolation=cfg.AUG.TEST.INTERPOLATION
-            ),
-            T.ToTensor(),
-        ])
-        return transforms
+        pass
 
     return transforms
 

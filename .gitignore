@@ -58,6 +58,8 @@ _darcs
 !/datasets/*.*
 !/datasets/custom_images/
 !/datasets/custom_images/*.jpg
+!/figures
+!/figures/*.*
 /projects/*/datasets
 /models
 /snippet

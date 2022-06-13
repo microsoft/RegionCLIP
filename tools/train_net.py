@@ -36,7 +36,6 @@ from detectron2.evaluation import (
     PascalVOCDetectionEvaluator,
     SemSegEvaluator,
     verify_results,
-    FLICKR30KEvaluator,
 )
 from detectron2.modeling import GeneralizedRCNNWithTTA
 
@@ -90,8 +89,6 @@ class Trainer(DefaultTrainer):
             return PascalVOCDetectionEvaluator(dataset_name)
         elif evaluator_type == "lvis":
             return LVISEvaluator(dataset_name, output_dir=output_folder)
-        elif evaluator_type == 'flickr30k':
-            return FLICKR30KEvaluator(dataset_name, output_dir=output_folder)
         if len(evaluator_list) == 0:
             raise NotImplementedError(
                 "no Evaluator for the dataset {} with the type {}".format(
