@@ -62,6 +62,8 @@ class LVISEvaluator(DatasetEvaluator):
         # Test set json files do not contain annotations (evaluation must be
         # performed using the LVIS evaluation server).
         self._do_evaluation = len(self._lvis_api.get_ann_ids()) > 0
+        if dataset_name == 'lvis_v1_val_custom_img':
+            self._do_evaluation = False
 
     def reset(self):
         self._predictions = []
