@@ -1,6 +1,7 @@
 pip install dataclasses ftfy regex tqdm timm diffdist spacy
 pip install git+https://github.com/lvis-dataset/lvis-api.git
-python -m spacy download en_core_web_sm
+pip install torch==1.8.0 torchvision==0.9.0
+# python -m spacy download en_core_web_sm
 
 CURRENT_DIR=${PWD##*/}
 cd ../
@@ -10,5 +11,5 @@ cd $CURRENT_DIR
 # for tsv loading
 pip install Pillow==7.1.2
 
-ln -s /mnt/data_storage/coco datasets/coco
-ln -s /mnt/data_storage/lvis datasets/lvis
+# ln -s /mnt/data_storage/coco datasets/coco
+# ln -s /mnt/data_storage/lvis datasets/lvis
