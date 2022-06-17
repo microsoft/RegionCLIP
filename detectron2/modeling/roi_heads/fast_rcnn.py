@@ -701,8 +701,8 @@ class FastRCNNOutputLayers(nn.Module):
         image_shapes = [x.image_size for x in proposals]
 
         # optional: multiply class scores with RPN scores 
-        scores_bf_multiply = scores  # as a backup for visualization purpose
-        if self.multiply_rpn_score:
+        if self.multiply_rpn_score and not self.training:
+            scores_bf_multiply = scores  # as a backup for visualization purpose
             rpn_scores = [p.get('objectness_logits') for p in proposals]
             scores = [(s * rpn_s[:, None]) ** 0.5 for s, rpn_s in zip(scores, rpn_scores)]
         return fast_rcnn_inference(
