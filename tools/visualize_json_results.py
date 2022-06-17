@@ -78,7 +78,6 @@ if __name__ == "__main__":
 
     os.makedirs(args.output, exist_ok=True)
     cnt = 0
-    import ipdb
 
     for dic in tqdm.tqdm(dicts):
         cnt += 1
@@ -100,7 +99,6 @@ if __name__ == "__main__":
                 else:
                     seen_box.append(pred['bbox'])
                     unique_box_pred.append(pred)
-            #ipdb.set_trace()
             print("Got {} boxes".format(len(unique_box_pred)))
             predictions = create_instances(unique_box_pred, img.shape[:2])
         else:  # default visualization
@@ -113,12 +111,3 @@ if __name__ == "__main__":
 
         concat = vis_pred # np.concatenate((vis_pred, vis_gt), axis=1)
         cv2.imwrite(os.path.join(args.output, basename), concat[:, :, ::-1])
-        if cnt % 50 == 0:
-            ipdb.set_trace()
-            # python tools/visualize_json_results.py 
-            # --input /home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/visualization_clip_gtbox/inference/coco_instances_results.json
-            # --input /home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/visualization_ourclipcc3m600k_gtbox/inference/coco_instances_results.json 
-            # --output output/regions --dataset coco_2017_ovd_all_test --conf-threshold 0.0 --show-unique-boxes
-            # python tools/visualize_json_results.py 
-            # --input /home/v-yiwuzhong/projects/azureblobs/vyiwuzhong_phillytools/results/visualization_ourclipcc3m600k_gtbox_lvis/inference/lvis_instances_results.json 
-            # --output output/regions --dataset lvis_v1_val --conf-threshold 0.05 --show-unique-boxes
