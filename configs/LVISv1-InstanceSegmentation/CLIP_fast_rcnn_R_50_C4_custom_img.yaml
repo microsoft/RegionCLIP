@@ -7,6 +7,7 @@ MODEL:
   CLIP:
     NO_BOX_DELTA: True
     OFFLINE_RPN_NMS_THRESH: 0.9
+    VIS: True # Note: visualize the scores before multiplying RPN scores, if any
 DATASETS:
   TRAIN: ("lvis_v1_train_custom_img",)
   TEST: ("lvis_v1_val_custom_img",)

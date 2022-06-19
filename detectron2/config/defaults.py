@@ -205,6 +205,7 @@ _C.MODEL.CLIP.NO_BOX_DELTA = False  # if True, during inference, no box delta wi
 _C.MODEL.CLIP.BG_CLS_LOSS_WEIGHT = None # if not None, it is the loss weight for bg regions
 _C.MODEL.CLIP.ONLY_SAMPLE_FG_PROPOSALS = False  # if True, during training, ignore all bg proposals and only sample fg proposals
 _C.MODEL.CLIP.MULTIPLY_RPN_SCORE = False  # if True, during inference, multiply RPN scores with classification scores
+_C.MODEL.CLIP.VIS = False # if True, when visualizing the object scores, we convert them to the scores before multiplying RPN scores
 
 _C.MODEL.CLIP.OPENSET_TEST_NUM_CLASSES = None  # if an integer, it is #all_cls in test
 _C.MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH = None # if not None, enables the openset/zero-shot training, the category embeddings during test

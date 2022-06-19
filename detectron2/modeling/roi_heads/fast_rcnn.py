@@ -56,6 +56,7 @@ def fast_rcnn_inference(
     soft_nms_prune: float,
     topk_per_image: int,
     scores_bf_multiply: List[torch.Tensor],
+    vis=False,
 ):
     """
     Call `fast_rcnn_inference_single_image` for all images.
@@ -89,7 +90,7 @@ def fast_rcnn_inference(
     result_per_image = [
         fast_rcnn_inference_single_image(
             boxes_per_image, scores_per_image, image_shape, score_thresh, nms_thresh, 
-            soft_nms_enabled, soft_nms_method, soft_nms_sigma, soft_nms_prune, topk_per_image, s_bf_per_img
+            soft_nms_enabled, soft_nms_method, soft_nms_sigma, soft_nms_prune, topk_per_image, s_bf_per_img, vis
         )
         for scores_per_image, boxes_per_image, image_shape, s_bf_per_img in zip(scores, boxes, image_shapes, scores_bf_multiply)
     ]
@@ -139,6 +140,7 @@ def fast_rcnn_inference_single_image(
     soft_nms_prune: float,
     topk_per_image: int,
     scores_bf_multiply: List[torch.Tensor],
+    vis=False,
 ):
     """
     Single-image inference. Return bounding-box detection results by thresholding
@@ -202,7 +204,8 @@ def fast_rcnn_inference_single_image(
     result = Instances(image_shape)
     result.pred_boxes = Boxes(boxes)
     result.scores = scores
-    result.scores = scores_bf_multiply # visualization: convert to the original scores before multiplying RPN scores
+    if vis: # visualization: convert to the original scores before multiplying RPN scores
+        result.scores = scores_bf_multiply         
     result.pred_classes = filter_inds[:, 1]
     return result, filter_inds[:, 0]
 
@@ -392,7 +395,7 @@ class FastRCNNOutputLayers(nn.Module):
         clip_cls_emb: tuple = (False, None),
         no_box_delta: bool = False,
         bg_cls_loss_weight: None,
-        multiply_rpn_score: False,
+        multiply_rpn_score: tuple = (False, False),
         openset_test: None,
     ):
         """
@@ -490,8 +493,8 @@ class FastRCNNOutputLayers(nn.Module):
         self.focal_scaled_loss = openset_test[3]  # focal scaling
         # inference options
         self.no_box_delta = no_box_delta  # box delta after regression
-        self.multiply_rpn_score = multiply_rpn_score
-        
+        self.multiply_rpn_score = multiply_rpn_score[0]
+        self.vis = multiply_rpn_score[1] # if enabled, visualize scores before multiplying RPN scores
         
     @classmethod
     def from_config(cls, cfg, input_shape):
@@ -517,7 +520,7 @@ class FastRCNNOutputLayers(nn.Module):
             "clip_cls_emb"          : (cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER, cfg.MODEL.CLIP.TEXT_EMB_PATH, cfg.MODEL.ROI_HEADS.NAME, cfg.MODEL.CLIP.TEXT_EMB_DIM),
             "no_box_delta"          : cfg.MODEL.CLIP.NO_BOX_DELTA or cfg.MODEL.CLIP.CROP_REGION_TYPE == 'GT',
             "bg_cls_loss_weight"    : cfg.MODEL.CLIP.BG_CLS_LOSS_WEIGHT,
-            "multiply_rpn_score"    : cfg.MODEL.CLIP.MULTIPLY_RPN_SCORE,
+            "multiply_rpn_score"    : (cfg.MODEL.CLIP.MULTIPLY_RPN_SCORE, cfg.MODEL.CLIP.VIS),
             "openset_test"          : (cfg.MODEL.CLIP.OPENSET_TEST_NUM_CLASSES, cfg.MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH, \
                                        cfg.MODEL.CLIP.CLSS_TEMP, cfg.MODEL.CLIP.FOCAL_SCALED_LOSS)
             # fmt: on
@@ -717,6 +720,7 @@ class FastRCNNOutputLayers(nn.Module):
             self.soft_nms_prune,
             self.test_topk_per_image,
             scores_bf_multiply = scores_bf_multiply,
+            vis = True if self.vis else False,
         )
 
     def predict_boxes_for_gt_classes(self, predictions, proposals):
