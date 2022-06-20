@@ -8,7 +8,7 @@ This is the official PyTorch implementation of RegionCLIP (CVPR 2022).
 > [Yiwu Zhong](https://pages.cs.wisc.edu/~yiwuzhong/), [Jianwei Yang](https://jwyang.github.io/), [Pengchuan Zhang](https://pzzhang.github.io/pzzhang/), [Chunyuan Li](https://chunyuan.li/), [Noel Codella](https://noelcodella.github.io/publicwebsite/), [Liunian Li](https://liunian-harold-li.github.io/), [Luowei Zhou](https://luoweizhou.github.io/), [Xiyang Dai](https://sites.google.com/site/xiyangdai/), [Lu Yuan](https://scholar.google.com/citations?user=k9TsUVsAAAAJ&hl=en), [Yin Li](https://www.biostat.wisc.edu/~yli/), and [Jianfeng Gao](https://www.microsoft.com/en-us/research/people/jfgao/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fum%2Fpeople%2Fjfgao%2F) <br>
 
 <p align="center">
-<img src="docs/regionclip.png" width=80% height=65%
+<img src="docs/regionclip.png" width=80% height=80%
 class="center">
 </p>
 
@@ -107,11 +107,17 @@ The detection results will be stored as the file "./output/inference/lvis_instan
 --dataset lvis_v1_val_custom_img \
 --conf-threshold 0.05 \
 --show-unique-boxes \
---max-boxes 25 
+--max-boxes 25 \
+--small-region-px 8100\ 
 ```
 </details> 
-  
-The visualized images will be placed at `./output/regions/`.
+
+The visualized images will be placed at `./output/regions/`. The visualized images would look like:
+
+<p align="center">
+<img src="docs/sample_img1_vis.jpg" width=80% height=80%
+class="center">
+</p>
 
 In this example, the detection results come from our pretrained RegionCLIP with ResNet50x4 architecture. The regions are proposed by an RPN trained by 866 object categories from LVIS dataset. For now, we use 1203 object class names from LVIS dataset for this visualization example. We also include an example in `visualize_zeroshot_inference.sh` with our pretrained RegionCLIP (ResNet50 architecture).
 

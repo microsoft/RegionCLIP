@@ -21,8 +21,8 @@ python ./tools/visualize_json_results.py \
 --dataset lvis_v1_val_custom_img \
 --conf-threshold 0.05 \
 --show-unique-boxes \
---max-boxes 25 
-#--small-region-px 8100\
+--max-boxes 25 \
+--small-region-px 8100\
 
 
 ########################################################
@@ -43,8 +43,8 @@ python ./tools/visualize_json_results.py \
 # --dataset lvis_v1_val_custom_img \
 # --conf-threshold 0.05 \
 # --show-unique-boxes \
-# --max-boxes 25 
-# #--small-region-px 8100\
+# --max-boxes 25 \
+# --small-region-px 8100\
 
 
 
