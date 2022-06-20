@@ -23,8 +23,7 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 
 ## Updates
 
-* [06/19/2022] We are working on [a huggingface gradio demo](). Stay tuned!
-* [06/19/2022] We released models and inference code for our RegionCLIP!
+* [06/20/2022] We released models and inference code for our RegionCLIP!
 
 ## Outline
 
