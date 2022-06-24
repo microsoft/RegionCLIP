@@ -23,7 +23,7 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 
 ## Updates
 
-* [06/24/2022] We released [**a Hugging Face Gradio demo**](https://huggingface.co/spaces/CVPR/regionclip-demo) with our pretrained RegionCLIP. Check it out!
+* [06/24/2022] We released [**a Web demo using Gradio on Hugging Face**](https://huggingface.co/spaces/CVPR/regionclip-demo) with our pretrained RegionCLIP. Check it out!
 * [06/20/2022] We released models and inference code for our RegionCLIP!
 
 ## Outline
