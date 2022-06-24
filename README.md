@@ -2,7 +2,7 @@
 
 This is the official PyTorch implementation of RegionCLIP (CVPR 2022).
 
-[**Paper**](https://arxiv.org/abs/2112.09106) | [**Slides**](https://drive.google.com/file/d/1EepNVJGo_d73Glr4vNjR4Av0dNkBCGcj/view?usp=sharing)
+[**Paper**](https://arxiv.org/abs/2112.09106) | [**Demo on Hugging Face**](https://huggingface.co/spaces/CVPR/regionclip-demo) | [**Slides**](https://drive.google.com/file/d/1EepNVJGo_d73Glr4vNjR4Av0dNkBCGcj/view?usp=sharing)
 
 > **RegionCLIP: Region-based Language-Image Pretraining (CVPR 2022)** <br>
 > [Yiwu Zhong](https://pages.cs.wisc.edu/~yiwuzhong/), [Jianwei Yang](https://jwyang.github.io/), [Pengchuan Zhang](https://pzzhang.github.io/pzzhang/), [Chunyuan Li](https://chunyuan.li/), [Noel Codella](https://noelcodella.github.io/publicwebsite/), [Liunian Li](https://liunian-harold-li.github.io/), [Luowei Zhou](https://luoweizhou.github.io/), [Xiyang Dai](https://sites.google.com/site/xiyangdai/), [Lu Yuan](https://scholar.google.com/citations?user=k9TsUVsAAAAJ&hl=en), [Yin Li](https://www.biostat.wisc.edu/~yli/), and [Jianfeng Gao](https://www.microsoft.com/en-us/research/people/jfgao/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fum%2Fpeople%2Fjfgao%2F) <br>
@@ -14,15 +14,16 @@ class="center">
 
 ## Overview
 
-We propose RegionCLIP that significantly extends CLIP to learn region-level visual representations. RegionCLIP enables fine-grained alignment between image regions and textual concepts, and thus supports region-based reasoning tasks including zero shot object detection and open-vocabulary object detection.
+We propose RegionCLIP that significantly extends CLIP to learn region-level visual representations. RegionCLIP enables fine-grained alignment between image regions and textual concepts, and thus supports region-based reasoning tasks including zero-shot object detection and open-vocabulary object detection.
 
 - **Pretraining**: We leverage a CLIP model to match image regions with template captions, and then pretrain our model to align these region-text pairs.
 - **Zero-shot inference**: Once pretrained, the learned region representations support zero-shot inference for object detection.
 - **Transfer learning**: The learned RegionCLIP model can be further fine-tuned with additional object detection annotations, allowing our model to be used for fully supervised or open-vocabulary object detection.
-- **Results**: Our method demonstrates **state-of-the-art** results for zero-shot object detection and open vocabulary object detection.
+- **Results**: Our method demonstrates **state-of-the-art** results for zero-shot object detection and open-vocabulary object detection.
 
 ## Updates
 
+* [06/24/2022] We released [**a Hugging Face Gradio demo**](https://huggingface.co/spaces/CVPR/regionclip-demo) with our pretrained RegionCLIP. Check it out!
 * [06/20/2022] We released models and inference code for our RegionCLIP!
 
 ## Outline
