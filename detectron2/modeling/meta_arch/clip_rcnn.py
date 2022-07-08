@@ -117,6 +117,8 @@ class CLIPFastRCNN(nn.Module):
                 offline_cfg.MODEL.RPN.CONV_DIMS = [-1, -1] # rpn layers
             if cfg.MODEL.CLIP.OFFLINE_RPN_NMS_THRESH:
                 offline_cfg.MODEL.RPN.NMS_THRESH = cfg.MODEL.CLIP.OFFLINE_RPN_NMS_THRESH  # 0.9
+            if cfg.MODEL.CLIP.OFFLINE_RPN_POST_NMS_TOPK_TEST:
+                offline_cfg.MODEL.RPN.POST_NMS_TOPK_TEST = cfg.MODEL.CLIP.OFFLINE_RPN_POST_NMS_TOPK_TEST # 1000
 
             # create offline backbone and RPN
             offline_backbone = build_backbone(offline_cfg)

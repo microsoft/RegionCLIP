@@ -215,6 +215,7 @@ _C.MODEL.CLIP.RUN_CVPR_OVR = False # if True, train CVPR OVR model with their te
 _C.MODEL.CLIP.FOCAL_SCALED_LOSS = None # if not None (float value for gamma), apply focal loss scaling idea to standard cross-entropy loss
 
 _C.MODEL.CLIP.OFFLINE_RPN_NMS_THRESH = None # the threshold of NMS in offline RPN
+_C.MODEL.CLIP.OFFLINE_RPN_POST_NMS_TOPK_TEST = None # the number of region proposals from offline RPN
 _C.MODEL.CLIP.PRETRAIN_IMG_TXT_LEVEL = True # if True, pretrain model using image-text level matching
 _C.MODEL.CLIP.PRETRAIN_ONLY_EOT = False # if True, use end-of-token emb to match region features, in image-text level matching
 _C.MODEL.CLIP.PRETRAIN_RPN_REGIONS = None # if not None, the number of RPN regions per image during pretraining
@@ -230,6 +231,7 @@ _C.MODEL.CLIP.TEACHER_CONCEPT_POOL_EMB = None # if not None, it uses the same co
 _C.MODEL.CLIP.TEACHER_POOLER_RESOLUTION = 14 # RoIpooling resolution of teacher model
 
 _C.MODEL.CLIP.TEXT_EMB_DIM = 1024 # the dimension of precomputed class embeddings
+_C.INPUT_DIR = "./datasets/custom_images" # the folder that includes the images for region feature extraction
 
 # ---------------------------------------------------------------------------- #
 # Backbone options

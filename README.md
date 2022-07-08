@@ -22,7 +22,7 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 - **Results**: Our method demonstrates **state-of-the-art** results for zero-shot object detection and open-vocabulary object detection.
 
 ## Updates
-
+* [07/07/2022] We included the scripts for region feature extraction. The extracted visual features can be used for various downstream tasks!
 * [06/24/2022] We released [**a Web demo using Gradio on Hugging Face**](https://huggingface.co/spaces/CVPR/regionclip-demo). It uses our pretrained RegionCLIP for zero-shot inference. Check it out!
 * [06/20/2022] We released models and inference code for our RegionCLIP!
 
@@ -67,7 +67,7 @@ Before detecting objects, please prepare pretrained models, label files, and the
   
 - Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
   - download the pretrained model checkpoint `regionclip_pretrained-cc_rn50x4.pth` (RegionCLIP with ResNet50x4) to the folder `./pretrained_ckpt/regionclip`.
-  - download the class embeddings `lvis_1203_cls_emb_rn50x4.pth` to the folder `./pretrained_ckpt/concept_emb/`.
+  - download the class embeddings `lvis_1203_cls_emb_rn50x4.pth` to the folder `./pretrained_ckpt/concept_emb`.
 - Check [`datasets/README.md`](datasets/README.md) to download LVIS label file `lvis_v1_val.json` and put it in the folder `./datasets/lvis/lvis_v1_val.json`. The file is used to specify object class names.
 - Put all custom images in the folder `./datasets/custom_images/`.
 
@@ -134,7 +134,7 @@ Before evaluation, please prepare pretrained models and set up the dataset.
   
 - Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
   - download the pretrained RegionCLIP checkpoint `regionclip_pretrained-cc_rn50.pth` to the folder `./pretrained_ckpt/regionclip`.
-  - download the class embeddings `coco_65_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb/`.
+  - download the class embeddings `coco_65_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb`.
 - Check [`datasets/README.md`](datasets/README.md) to set up COCO dataset.
 
 </details>
@@ -180,7 +180,7 @@ Before detecting objects, please prepare the trained detectors, label files, and
 - Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
   - download the trained detector checkpoint `regionclip_finetuned-lvis_rn50x4.pth` to the folder `./pretrained_ckpt/regionclip`.
   - download the trained RPN checkpoint `rpn_lvis_866_lsj.pth` to the folder `./pretrained_ckpt/rpn`.
-  - download the class embeddings `lvis_1203_cls_emb_rn50x4.pth` to the folder `./pretrained_ckpt/concept_emb/`.
+  - download the class embeddings `lvis_1203_cls_emb_rn50x4.pth` to the folder `./pretrained_ckpt/concept_emb`.
 - Check [`datasets/README.md`](datasets/README.md) to download label file `lvis_v1_val.json` and put it in the folder `./datasets/lvis/lvis_v1_val.json`.
 - Put all custom images in the folder `./datasets/custom_images/`.
 
@@ -216,7 +216,7 @@ Before evaluation, please prepare the trained detector and set up the dataset.
 - Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
   - download the trained detector checkpoint `regionclip_finetuned-coco_rn50.pth` to the folder `./pretrained_ckpt/regionclip`, 
   - download the trained RPN checkpoint `rpn_coco_48.pth` to the folder `./pretrained_ckpt/rpn`,
-  - download the class embeddings `coco_48_base_cls_emb.pth` and `coco_65_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb/`.
+  - download the class embeddings `coco_48_base_cls_emb.pth` and `coco_65_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb`.
 - Check [`datasets/README.md`](datasets/README.md) to set up COCO dataset.
 
 </details>
@@ -259,7 +259,7 @@ Before training, please prepare our pretrained RegionCLIP model and set up the d
 - Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
   - download the pretrained RegionCLIP checkpoint `regionclip_pretrained-cc_rn50.pth` to the folder `./pretrained_ckpt/regionclip`, 
   - download the trained RPN checkpoint `rpn_coco_48.pth` to the folder `./pretrained_ckpt/rpn`,
-  - download the class embeddings `coco_48_base_cls_emb.pth` and `coco_65_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb/`.
+  - download the class embeddings `coco_48_base_cls_emb.pth` and `coco_65_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb`.
 - Check [`datasets/README.md`](datasets/README.md) to set up COCO dataset.
 
 </details>
@@ -288,7 +288,97 @@ For more examples, please refer to `train_transfer_learning.sh`. This script pro
 
 ## Extract Region Features
 
-Under construction. We're working on scripts for extracting region features from our pretrained models.
+We provide scripts for extracting region features from our pre-trained RegionCLIP. Given a folder of images, our scripts extract region features (along with other detection results such as box coordinates) and save them as local files.
+
+The following is an example using pretrained RegionCLIP with ResNet50. We extend the scripts from zero-shot inference (section above) with minor changes, such as the input and output folders.
+
+<details>
+
+<summary>
+The following is a brief introduction for the settings.
+</summary>
+
+We enable feature extraction for two types of regions:
+
+- RPN regions: This setting is class-agnostic. The regions are the top-scored RPN proposals.
+
+- Detection regions: This setting requires additional input as a concept embedding file (the concepts of interests). The regions are the final detection output boxes (after 2nd-stage NMS). As a reference, the [Bottom-Up features](https://openaccess.thecvf.com/content_cvpr_2018/papers/Anderson_Bottom-Up_and_Top-Down_CVPR_2018_paper.pdf) (widely-used in vision-language tasks) also come from the final detection boxes.
+
+</details>
+
+
+
+<details>
+
+<summary>
+Before running scripts, please prepare pretrained models and your custom images.
+</summary>
+  
+- Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
+  - download the pretrained RegionCLIP checkpoint `regionclip_pretrained-cc_rn50.pth` to the folder `./pretrained_ckpt/regionclip`.
+  - download the trained RPN checkpoint `rpn_lvis_866.pth` to the folder `./pretrained_ckpt/rpn`.
+  - (optional) if you want to extract features of the boxes detected for 1203 LVIS concepts, download the class embeddings `lvis_1203_cls_emb.pth` to the folder `./pretrained_ckpt/concept_emb`.
+- Put all custom images in a folder. It can be specified in the script (check `INPUT_DIR` below).
+
+
+</details>
+
+
+<details>
+
+<summary>
+After preparation, run the following script to extract region features.
+</summary>
+
+The following script extracts features from **RPN regions**.
+```
+# RN50, features of RPN regions
+python3 ./tools/extract_region_features.py \
+--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_zsinf.yaml \
+MODEL.WEIGHTS ./pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50.pth \
+MODEL.CLIP.CROP_REGION_TYPE RPN \
+MODEL.CLIP.MULTIPLY_RPN_SCORE True \
+MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \
+MODEL.CLIP.BB_RPN_WEIGHTS ./pretrained_ckpt/rpn/rpn_lvis_866.pth \
+INPUT_DIR ./datasets/custom_images \
+OUTPUT_DIR ./output/region_feats \
+MODEL.CLIP.OFFLINE_RPN_POST_NMS_TOPK_TEST 100 \
+```
+
+The following script extracts features from **detection regions** (after 2nd-stage NMS).
+
+```
+# You can simply run "bash extract_region_features.sh"
+python3 ./tools/extract_region_features.py \
+--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_zsinf.yaml \
+MODEL.WEIGHTS ./pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50.pth \
+MODEL.CLIP.TEXT_EMB_PATH ./pretrained_ckpt/concept_emb/lvis_1203_cls_emb.pth \
+MODEL.CLIP.CROP_REGION_TYPE RPN \
+MODEL.CLIP.MULTIPLY_RPN_SCORE True \
+MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \
+MODEL.CLIP.BB_RPN_WEIGHTS ./pretrained_ckpt/rpn/rpn_lvis_866.pth \
+INPUT_DIR ./datasets/custom_images \
+OUTPUT_DIR ./output/region_feats \
+TEST.DETECTIONS_PER_IMAGE 100 \
+```
+
+The region features of each image will be saved into a `.pth` file in the folder `OUTPUT_DIR`. For simplicity, the current script only supports single GPU inference. As a reference, it takes roughly 0.76 seconds on single Titan-Xp GPU with RegionCLIP-ResNet50 and 1203 LVIS object concepts.
+
+The following is a list of key arguments for feature extraction. You can specify them in the script as needed.
+
+- `INPUT_DIR` and `OUTPUT_DIR`: specify a folder of input images and an output folder where region features will be saved, respectively.
+
+- `MODEL.CLIP.BB_RPN_WEIGHTS`: specifies which trained RPN to use. You can replace it as needed. For more details, please check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md).
+
+- `MODEL.CLIP.TEXT_EMB_PATH` (optional): specifies which object concept embedding file to use. The selection of concepts will affect the per-class NMS (2nd stage) and thus final output boxes.
+
+- `TEST.DETECTIONS_PER_IMAGE`: defines the number of final output regions (e.g., default value is 100 in COCO configs and 300 in LVIS configs) 
+
+- `MODEL.CLIP.OFFLINE_RPN_POST_NMS_TOPK_TEST`: defines the number of region proposals from RPN (e.g., default is 1000). Lowering this value can significantly reduce inference time and memory cost, but might affect the final detection quality.
+
+- `MODEL.CLIP.OFFLINE_RPN_NMS_THRESH` and `MODEL.ROI_HEADS.NMS_THRESH_TEST`: control the NMS IoU thresholds in RPN (1st stage, default is 0.9) and prediction head (2nd stage, default is 0.5), respectively. If you extract features using RPN regions, you might want to change `MODEL.CLIP.OFFLINE_RPN_NMS_THRESH` as needed.
+
+</details>
 
 
 ## Citation and Acknowledgement
