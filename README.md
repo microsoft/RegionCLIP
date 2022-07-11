@@ -22,6 +22,7 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 - **Results**: Our method demonstrates **state-of-the-art** results for zero-shot object detection and open-vocabulary object detection.
 
 ## Updates
+* [07/11/2022] We included the scripts for concept feature extraction. It can be used for your own costomized concept pool!
 * [07/07/2022] We included the scripts for region feature extraction. The extracted visual features can be used for various downstream tasks!
 * [06/24/2022] We released [**a Web demo using Gradio on Hugging Face**](https://huggingface.co/spaces/CVPR/regionclip-demo). It uses our pretrained RegionCLIP for zero-shot inference. Check it out!
 * [06/20/2022] We released models and inference code for our RegionCLIP!
