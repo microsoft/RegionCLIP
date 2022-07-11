@@ -34,8 +34,9 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 4. [Zero-shot Inference](#Zero-shot-Inference)
 5. [Transfer Learning](#Transfer-Learning)
 6. [Extract Region Features](#Extract-Region-Features)
-7. [Citation and Acknowledgement](#Citation-and-Acknowledgement)
-8. [Contributing](#Contributing)
+7. [Extract Concept Features](#Extract-Concept-Features)
+8. [Citation and Acknowledgement](#Citation-and-Acknowledgement)
+9. [Contributing](#Contributing)
 
 ## Installation
 
@@ -380,8 +381,65 @@ The following is a list of key arguments for feature extraction. You can specify
 
 </details>
 
+## Extract Concept Features
+
+Along with the region feature extraction, we also provide scripts for extracting concept features from our pre-trained RegionCLIP. Given a list of concepts, our scripts extract textual embeddings and save them as local files. The following is an example using pretrained RegionCLIP. We extend the scripts from region feature extraction (section above) with minor changes.
+
+
+<details>
+
+<summary>
+Before running scripts, please prepare pretrained models and your custom concepts.
+</summary>
+  
+- Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
+  - download the pretrained RegionCLIP checkpoint `regionclip_pretrained-cc_rn50.pth` to the folder `./pretrained_ckpt/regionclip`.
+- Put the concepts.txt with all concepts in a folder which is specified in the script (check `INPUT_DIR` below).
+
+
+</details>
+
+
+<details>
+
+<summary>
+After preparation, run the following script to extract region features.
+</summary>
+
+The following script extracts features from ResNet50.
+```
+# RN50 concept embeddings
+python3 ./tools/extract_concept_features.py \
+--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_zsinf.yaml \
+MODEL.WEIGHTS ./pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50.pth \
+MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \
+INPUT_DIR ./datasets/custom_concepts \
+OUTPUT_DIR ./output/concept_feats
+```
+
+And for ResNet50x4, use the following command:
+```
+# RN50x4 concept embeddings
+python3 ./tools/extract_concept_features.py \
+--config-file ./configs/LVISv1-InstanceSegmentation/CLIP_fast_rcnn_R_50_C4_zsinf.yaml \
+MODEL.WEIGHTS ./pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50x4.pth \
+MODEL.CLIP.TEXT_EMB_DIM 640 \
+MODEL.RESNETS.DEPTH 200 \
+MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \
+INPUT_DIR ./datasets/custom_concepts \
+OUTPUT_DIR ./output/concept_feats
+```
+
+The region features of each image will be saved into a `.pth` file in the folder `OUTPUT_DIR`.
+
+The following is a list of key arguments for feature extraction. You can specify them in the script as needed.
+
+- `INPUT_DIR` and `OUTPUT_DIR`: specify a folder of input concepts and an output folder where region features will be saved, respectively.
+
+</details>
 
 ## Citation and Acknowledgement
+
 ### Citation
 
 If you find this repo useful, please consider citing our paper:
