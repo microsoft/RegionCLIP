@@ -43,6 +43,7 @@ class CLIPFastRCNN(nn.Module):
         offline_backbone: Backbone,
         backbone: Backbone,
         offline_proposal_generator: nn.Module,
+        language_encoder: nn.Module, 
         roi_heads: nn.Module,
         pixel_mean: Tuple[float],
         pixel_std: Tuple[float],
@@ -68,6 +69,7 @@ class CLIPFastRCNN(nn.Module):
         super().__init__()
         self.offline_backbone = offline_backbone
         self.backbone = backbone
+        self.lang_encoder = language_encoder
         self.offline_proposal_generator = offline_proposal_generator
         self.roi_heads = roi_heads
 
@@ -136,12 +138,15 @@ class CLIPFastRCNN(nn.Module):
             offline_cfg = None
         
         backbone = build_backbone(cfg)
+        # build language encoder
+        language_encoder = build_clip_language_encoder(cfg)
         roi_heads = build_roi_heads(cfg, backbone.output_shape())
 
         return {
             "offline_backbone": offline_backbone,
             "offline_proposal_generator": offline_rpn, 
             "backbone": backbone,
+            "language_encoder": language_encoder, 
             "roi_heads": roi_heads, 
             "input_format": cfg.INPUT.FORMAT,
             "vis_period": cfg.VIS_PERIOD,
