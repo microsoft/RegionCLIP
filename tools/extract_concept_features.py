@@ -87,18 +87,17 @@ def main(args):
     
     concept_feats = []
     with open(concept_file, 'r') as f:
-        concept = f.readline().strip()
-        with torch.no_grad():
-            token_embeddings = pre_tokenize([concept]).to(model.device)[0]
-            text_features = model.lang_encoder.encode_text(token_embeddings)
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-            # average over all templates
-            text_features = text_features.mean(0, keepdim=True)
-            # redo the L2 normalization
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)  
-            concept_feats.append(text_features)
-    
+        for line in f:
+            concept = line.strip()
+            with torch.no_grad():
+                token_embeddings = pre_tokenize([concept]).to(model.device)[0]
+                text_features = model.lang_encoder.encode_text(token_embeddings)
+                # average over all templates
+                text_features = text_features.mean(0, keepdim=True)
+                concept_feats.append(text_features)
+
     concept_feats = torch.stack(concept_feats, 0)
+    concept_feats = torch.squeeze(concept_feats).cpu()
     saved_path = os.path.join(cfg.OUTPUT_DIR, 'concept_embeds.pth')
     torch.save(concept_feats, saved_path)
 

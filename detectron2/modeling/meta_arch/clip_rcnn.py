@@ -139,7 +139,10 @@ class CLIPFastRCNN(nn.Module):
         
         backbone = build_backbone(cfg)
         # build language encoder
-        language_encoder = build_clip_language_encoder(cfg)
+        if cfg.MODEL.CLIP.GET_CONCEPT_EMB: # extract concept embeddings
+            language_encoder = build_clip_language_encoder(cfg)
+        else:
+            language_encoder = None
         roi_heads = build_roi_heads(cfg, backbone.output_shape())
 
         return {

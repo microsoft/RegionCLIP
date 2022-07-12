@@ -395,7 +395,7 @@ Before running scripts, please prepare pretrained models and your custom concept
   
 - Check [`MODEL_ZOO.md`](docs/MODEL_ZOO.md) to 
   - download the pretrained RegionCLIP checkpoint `regionclip_pretrained-cc_rn50.pth` to the folder `./pretrained_ckpt/regionclip`.
-- Put the concepts.txt with all concepts in a folder which is specified in the script (check `INPUT_DIR` below).
+- Put all concepts in the file `concepts.txt` with each line as a concept name. Place this file in a folder which can be specified in the script (check `INPUT_DIR` below).
 
 
 </details>
@@ -415,7 +415,8 @@ python3 ./tools/extract_concept_features.py \
 MODEL.WEIGHTS ./pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50.pth \
 MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \
 INPUT_DIR ./datasets/custom_concepts \
-OUTPUT_DIR ./output/concept_feats
+OUTPUT_DIR ./output/concept_feats \
+MODEL.CLIP.GET_CONCEPT_EMB True \
 ```
 
 And for ResNet50x4, use the following command:
@@ -428,10 +429,11 @@ MODEL.CLIP.TEXT_EMB_DIM 640 \
 MODEL.RESNETS.DEPTH 200 \
 MODEL.CLIP.OFFLINE_RPN_CONFIG ./configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml \
 INPUT_DIR ./datasets/custom_concepts \
-OUTPUT_DIR ./output/concept_feats
+OUTPUT_DIR ./output/concept_feats \
+MODEL.CLIP.GET_CONCEPT_EMB True \
 ```
 
-The region features of each image will be saved into a `.pth` file in the folder `OUTPUT_DIR`.
+The language embeddings of all concepts will be saved into a `.pth` file in the folder `OUTPUT_DIR`. These language embeddings have not been normalized yet, for the consistency with concept embeddings provided in [`MODEL_ZOO.md`](docs/MODEL_ZOO.md).
 
 The following is a list of key arguments for feature extraction. You can specify them in the script as needed.
 
