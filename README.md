@@ -22,6 +22,7 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 - **Results**: Our method demonstrates **state-of-the-art** results for zero-shot object detection and open-vocabulary object detection.
 
 ## Updates
+* :collision: [10/05/2022] RegionCLIP now supports not only resnet but also many vision transformers (e.g., vit, swin, davit, focalnet) for zero-shot object detection! Please checkout the zero-shot branch!
 * [07/07/2022] We included the scripts for region feature extraction. The extracted visual features can be used for various downstream tasks!
 * [06/24/2022] We released [**a Web demo using Gradio on Hugging Face**](https://huggingface.co/spaces/CVPR/regionclip-demo). It uses our pretrained RegionCLIP for zero-shot inference. Check it out!
 * [06/20/2022] We released models and inference code for our RegionCLIP!
