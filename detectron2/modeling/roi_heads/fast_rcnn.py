@@ -13,6 +13,8 @@ from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
+from ..backbone.clip_lang_encoder import build_clip_language_encoder
+
 __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers"]
 
 
@@ -159,8 +161,9 @@ def fast_rcnn_inference_single_image(
         scores = scores[valid_mask]
         scores_bf_multiply = scores_bf_multiply[valid_mask]
 
-    scores = scores[:, :-1]
-    scores_bf_multiply = scores_bf_multiply[:, :-1]
+    # if scores.shape[1] == 81:
+    #     scores = scores[:, :-1]
+    #     scores_bf_multiply = scores_bf_multiply[:, :-1]
     num_bbox_reg_classes = boxes.shape[1] // 4
     # Convert to Boxes to use the `clip` function ...
     boxes = Boxes(boxes.reshape(-1, 4))
@@ -397,6 +400,7 @@ class FastRCNNOutputLayers(nn.Module):
         bg_cls_loss_weight: None,
         multiply_rpn_score: tuple = (False, False),
         openset_test: None,
+        lang_encoder: None, 
     ):
         """
         NOTE: this interface is experimental.
@@ -438,8 +442,8 @@ class FastRCNNOutputLayers(nn.Module):
             input_shape = ShapeSpec(channels=input_shape)
         input_size = input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
                     
-        self.use_clip_cls_emb = clip_cls_emb[0]
-        if self.use_clip_cls_emb: # use CLIP text embeddings as classifier's weights
+        self.clip_cls_emb_type = clip_cls_emb[0]
+        if self.clip_cls_emb_type == "text-embedding": # use CLIP text embeddings as classifier's weights
             input_size = clip_cls_emb[3] if clip_cls_emb[2] in ['CLIPRes5ROIHeads', 'CLIPStandardROIHeads'] else input_size
             text_emb_require_grad = False
             self.use_bias = False
@@ -474,6 +478,9 @@ class FastRCNNOutputLayers(nn.Module):
                     self.test_cls_score.weight.copy_(pre_computed_w)
                     if self.use_bias:
                         nn.init.constant_(self.test_cls_score.bias, 0)    
+        elif self.clip_cls_emb_type == "text-encoder":
+            # use pretrained text encoder here for flexibility
+            self.lang_encoder = lang_encoder
         else: # regular classification layer  
             self.cls_score = nn.Linear(input_size, num_classes + 1) # one background class (hence + 1)
             nn.init.normal_(self.cls_score.weight, std=0.01)
@@ -483,7 +490,8 @@ class FastRCNNOutputLayers(nn.Module):
         num_bbox_reg_classes = 1 if cls_agnostic_bbox_reg else num_classes
         box_dim = len(box2box_transform.weights)
         self.bbox_pred = nn.Linear(input_size, num_bbox_reg_classes * box_dim)
-        nn.init.normal_(self.bbox_pred.weight, std=0.001)
+        # nn.init.normal_(self.bbox_pred.weight, std=0.001)
+        nn.init.constant_(self.bbox_pred.weight, 0)
         nn.init.constant_(self.bbox_pred.bias, 0)
 
         # training options
@@ -503,7 +511,7 @@ class FastRCNNOutputLayers(nn.Module):
         #     assert cfg.MODEL.CLIP.NO_BOX_DELTA is False
         return {
             "input_shape": input_shape,
-            "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS),
+            "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS),            
             # fmt: off
             "num_classes"           : cfg.MODEL.ROI_HEADS.NUM_CLASSES,
             "cls_agnostic_bbox_reg" : cfg.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG,
@@ -523,11 +531,12 @@ class FastRCNNOutputLayers(nn.Module):
             "bg_cls_loss_weight"    : cfg.MODEL.CLIP.BG_CLS_LOSS_WEIGHT,
             "multiply_rpn_score"    : (cfg.MODEL.CLIP.MULTIPLY_RPN_SCORE, cfg.MODEL.CLIP.VIS),
             "openset_test"          : (cfg.MODEL.CLIP.OPENSET_TEST_NUM_CLASSES, cfg.MODEL.CLIP.OPENSET_TEST_TEXT_EMB_PATH, \
-                                       cfg.MODEL.CLIP.CLSS_TEMP, cfg.MODEL.CLIP.FOCAL_SCALED_LOSS)
+                                       cfg.MODEL.CLIP.CLSS_TEMP, cfg.MODEL.CLIP.FOCAL_SCALED_LOSS),
+            "lang_encoder"          : None if cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER != "text-encoder" else build_clip_language_encoder(cfg)
             # fmt: on
         }
 
-    def forward(self, x):
+    def forward(self, x, img_proj=None):
         """
         Args:
             x: per-region features of shape (N, ...) for N bounding boxes to predict.
@@ -544,7 +553,7 @@ class FastRCNNOutputLayers(nn.Module):
             x = torch.flatten(x, start_dim=1)
         
         # use clip text embeddings as classifier's weights
-        if self.use_clip_cls_emb: 
+        if self.clip_cls_emb_type == "text-embedding": 
             normalized_x = F.normalize(x, p=2.0, dim=1)
              # open-set inference enabled
             if not self.training and self.test_cls_score is not None: 
@@ -564,6 +573,13 @@ class FastRCNNOutputLayers(nn.Module):
 
             scores = torch.cat((cls_scores, bg_score), dim=1)
             scores = scores / self.temperature
+        elif self.clip_cls_emb_type == "text-encoder":
+            x_proj = x @ img_proj    
+            normalized_x = F.normalize(x_proj, p=2.0, dim=1)
+            y = self.lang_encoder.text_embeddings
+            normalized_y = F.normalize(y, p=2.0, dim=1)
+            scores = self.lang_encoder.logit_scale.exp() * normalized_x @ normalized_y.t()
+            # scores = torch.cat((scores, scores.new(scores.shape[0], 1).fill_(-1000000)), 1)
         # regular classifier
         else:  
             scores = self.cls_score(x)

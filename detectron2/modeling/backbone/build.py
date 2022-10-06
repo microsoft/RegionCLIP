@@ -29,5 +29,5 @@ def build_backbone(cfg, input_shape=None):
 
     backbone_name = cfg.MODEL.BACKBONE.NAME
     backbone = BACKBONE_REGISTRY.get(backbone_name)(cfg, input_shape)
-    assert isinstance(backbone, Backbone)
+    # assert isinstance(backbone, Backbone)
     return backbone

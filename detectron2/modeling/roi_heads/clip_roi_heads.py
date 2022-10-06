@@ -111,7 +111,10 @@ class CLIPRes5ROIHeads(ROIHeads):
 
     def _shared_roi_transform(self, features, boxes, backbone_res5):
         x = self.pooler(features, boxes)
-        return backbone_res5(x)
+        if backbone_res5 is not None:
+            return backbone_res5(x)
+        else:
+            return x
 
     def forward(self, images, features, proposals, targets=None, res5=None, attnpool=None):
         """
@@ -133,6 +136,172 @@ class CLIPRes5ROIHeads(ROIHeads):
             predictions = self.box_predictor(att_feats)
         else: # mean pooling
             predictions = self.box_predictor(box_features.mean(dim=[2, 3]))
+
+        if self.training:
+            del features
+            losses = self.box_predictor.losses(predictions, proposals)
+            if self.mask_on:
+                proposals, fg_selection_masks = select_foreground_proposals(
+                    proposals, self.num_classes
+                )
+                # Since the ROI feature transform is shared between boxes and masks,
+                # we don't need to recompute features. The mask loss is only defined
+                # on foreground proposals, so we need to select out the foreground
+                # features.
+                mask_features = box_features[torch.cat(fg_selection_masks, dim=0)]
+                del box_features
+                losses.update(self.mask_head(mask_features, proposals))
+            return [], losses
+        else:
+            pred_instances, _ = self.box_predictor.inference(predictions, proposals)
+            pred_instances = self.forward_with_given_boxes(features, pred_instances, res5)
+            return pred_instances, {}
+
+    def forward_with_given_boxes(self, features, instances, res5=None):
+        """
+        Use the given boxes in `instances` to produce other (non-box) per-ROI outputs.
+
+        Args:
+            features: same as in `forward()`
+            instances (list[Instances]): instances to predict other outputs. Expect the keys
+                "pred_boxes" and "pred_classes" to exist.
+
+        Returns:
+            instances (Instances):
+                the same `Instances` object, with extra
+                fields such as `pred_masks` or `pred_keypoints`.
+        """
+        assert not self.training
+        assert instances[0].has("pred_boxes") and instances[0].has("pred_classes")
+
+        if self.mask_on:
+            features = [features[f] for f in self.in_features]
+            x = self._shared_roi_transform(features, [x.pred_boxes for x in instances], res5)
+            return self.mask_head(x, instances)
+        else:
+            return instances
+
+@ROI_HEADS_REGISTRY.register()
+class CLIPTransformerROIHeads(ROIHeads):
+    """
+    Created for CLIP ResNet. This head uses the last resnet layer from backbone.
+    Extended from Res5ROIHeads in roi_heads.py
+    """
+
+    @configurable
+    def __init__(
+        self,
+        *,
+        in_features: List[str],
+        pooler: ROIPooler,
+        res5: None,
+        box_predictor: nn.Module,
+        mask_head: Optional[nn.Module] = None,
+        **kwargs,
+    ):
+        """
+        NOTE: this interface is experimental.
+
+        Args:
+            in_features (list[str]): list of backbone feature map names to use for
+                feature extraction
+            pooler (ROIPooler): pooler to extra region features from backbone
+            res5 (nn.Sequential): a CNN to compute per-region features, to be used by
+                ``box_predictor`` and ``mask_head``. Typically this is a "res5"
+                block from a ResNet.
+            box_predictor (nn.Module): make box predictions from the feature.
+                Should have the same interface as :class:`FastRCNNOutputLayers`.
+            mask_head (nn.Module): transform features to make mask predictions
+        """
+        super().__init__(**kwargs)
+        self.in_features = in_features
+        self.pooler = pooler
+        # if isinstance(res5, (list, tuple)):
+        #     res5 = nn.Sequential(*res5)
+        self.res5 = res5  #  None, this head uses the res5 from backbone
+        self.box_predictor = box_predictor
+        self.mask_on = mask_head is not None
+        if self.mask_on:
+            self.mask_head = mask_head
+
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        # fmt: off
+        ret = super().from_config(cfg)
+        in_features = ret["in_features"] = cfg.MODEL.ROI_HEADS.IN_FEATURES
+        pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        pooler_type       = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
+        pooler_scales     = (1.0 / input_shape[in_features[0]].stride, )
+        sampling_ratio    = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+        mask_on           = cfg.MODEL.MASK_ON
+        # fmt: on
+        assert not cfg.MODEL.KEYPOINT_ON
+        assert len(in_features) == 1
+
+        ret["pooler"] = ROIPooler(
+            output_size=pooler_resolution,
+            scales=pooler_scales,
+            sampling_ratio=sampling_ratio,
+            pooler_type=pooler_type,
+        )
+
+        # Compatbility with old moco code. Might be useful.
+        # See notes in StandardROIHeads.from_config
+        # if not inspect.ismethod(cls._build_res5_block):
+        #     logger.warning(
+        #         "The behavior of _build_res5_block may change. "
+        #         "Please do not depend on private methods."
+        #     )
+        #     cls._build_res5_block = classmethod(cls._build_res5_block)
+
+        ret["res5"], out_channels = None, input_shape[in_features[0]].channels # cls._build_res5_block(cfg)
+        ret["box_predictor"] = FastRCNNOutputLayers(
+            cfg, ShapeSpec(channels=out_channels, height=1, width=1)
+        )
+
+        if mask_on:
+            ret["mask_head"] = build_mask_head(
+                cfg,
+                ShapeSpec(channels=out_channels, width=pooler_resolution, height=pooler_resolution),
+            )
+        return ret
+
+    def _shared_roi_transform(self, features, boxes, backbone_res5):
+        x = self.pooler(features, boxes)
+        if backbone_res5 is not None:
+            if isinstance(backbone_res5, nn.Module):
+                return backbone_res5(x)
+            elif isinstance(backbone_res5, nn.Parameter):
+                x_flattened = x.flatten(2).transpose(1, 2)
+                proj = x_flattened @ backbone_res5
+                return proj.transpose(1, 2).view(x.shape[0], -1, *x.shape[2:])
+        else:
+            return x
+
+    def forward(self, images, features, proposals, targets=None, res5=None, attnpool=None, norm=None):
+        """
+        See :meth:`ROIHeads.forward`.
+        """
+        del images
+
+        if self.training:
+            assert targets
+            proposals = self.label_and_sample_proposals(proposals, targets)
+        del targets
+
+        proposal_boxes = [x.proposal_boxes for x in proposals]
+        box_features = self._shared_roi_transform(
+            [features[f] for f in self.in_features], proposal_boxes, None
+        )
+        if attnpool:  # att pooling
+            att_feats = attnpool(box_features)
+            predictions = self.box_predictor(att_feats)
+        else: # mean pooling
+            pooled_features = box_features.mean(dim=[2, 3])
+            if norm is not None:
+                pooled_features = norm(pooled_features)
+
+            predictions = self.box_predictor(pooled_features, img_proj=res5)
 
         if self.training:
             del features
@@ -247,7 +416,13 @@ class PretrainRes5ROIHeads(ROIHeads):
 
     def _shared_roi_transform(self, features, boxes, backbone_res5):
         x = self.pooler(features, boxes)
-        return backbone_res5(x)
+        if backbone_res5 is not None:
+            if isinstance(backbone_res5, nn.Module):
+                return backbone_res5(x)
+            elif isinstance(backbone_res5, nn.Parameter):
+                return x @ res5            
+        else:
+            return x
 
     def forward(self, images, features, proposals, targets=None, res5=None, attnpool=None):
         """

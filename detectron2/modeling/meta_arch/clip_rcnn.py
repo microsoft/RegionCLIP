@@ -13,6 +13,7 @@ from detectron2.data.detection_utils import convert_image_to_rgb
 from detectron2.structures import ImageList, Instances, Boxes
 from detectron2.utils.events import get_event_storage
 from detectron2.utils.logger import log_first_n
+from detectron2.data import MetadataCatalog
 
 from ..backbone import Backbone, build_backbone
 from ..postprocessing import detector_postprocess
@@ -23,7 +24,7 @@ from .build import META_ARCH_REGISTRY
 from PIL import Image
 import copy
 from ..backbone.fpn import build_resnet_fpn_backbone
-from ..backbone.clip_backbone import build_clip_language_encoder
+from ..backbone.clip_lang_encoder import build_clip_language_encoder
 from detectron2.utils.comm import gather_tensors, MILCrossEntropy
 
 __all__ = ["CLIPFastRCNN", "PretrainFastRCNN"]
@@ -40,8 +41,10 @@ class CLIPFastRCNN(nn.Module):
     def __init__(
         self,
         *,
+        cfg: None, 
         offline_backbone: Backbone,
-        backbone: Backbone,
+        backbone: Backbone, 
+        image_projection: None, 
         offline_proposal_generator: nn.Module,
         language_encoder: nn.Module, 
         roi_heads: nn.Module,
@@ -67,9 +70,10 @@ class CLIPFastRCNN(nn.Module):
             vis_period: the period to run visualization. Set to 0 to disable.
         """
         super().__init__()
+        self.cfg = cfg
         self.offline_backbone = offline_backbone
         self.backbone = backbone
-        self.lang_encoder = language_encoder
+        self.image_projection = image_projection
         self.offline_proposal_generator = offline_proposal_generator
         self.roi_heads = roi_heads
 
@@ -138,14 +142,20 @@ class CLIPFastRCNN(nn.Module):
             offline_cfg = None
         
         backbone = build_backbone(cfg)
+        image_projection = nn.Parameter(
+            torch.empty(backbone.num_features[-1], 512)
+        )
+
         # build language encoder
         language_encoder = build_clip_language_encoder(cfg)
         roi_heads = build_roi_heads(cfg, backbone.output_shape())
 
         return {
+            "cfg": cfg, 
             "offline_backbone": offline_backbone,
             "offline_proposal_generator": offline_rpn, 
-            "backbone": backbone,
+            "backbone": backbone, 
+            "image_projection": image_projection, 
             "language_encoder": language_encoder, 
             "roi_heads": roi_heads, 
             "input_format": cfg.INPUT.FORMAT,
@@ -231,7 +241,9 @@ class CLIPFastRCNN(nn.Module):
             storage = get_event_storage()
             if storage.iter % self.vis_period == 0:
                 self.visualize_training(batched_inputs, proposals)
-        #visualize_proposals(batched_inputs, proposals, self.input_format)
+
+        # import pdb; pdb.set_trace()
+        # visualize_proposals(batched_inputs, proposals, self.input_format)
 
         losses = {}
         losses.update(detector_losses)
@@ -241,7 +253,8 @@ class CLIPFastRCNN(nn.Module):
         self,
         batched_inputs: List[Dict[str, torch.Tensor]],
         detected_instances: Optional[List[Instances]] = None,
-        do_postprocess: bool = True,
+        do_postprocess: bool = True, 
+        concepts: List[str] = None, 
     ):
         """
         Run inference on the given inputs.
@@ -291,9 +304,14 @@ class CLIPFastRCNN(nn.Module):
             if self.use_clip_attpool: # use att_pool from CLIP to match dimension
                 results, _  = self.roi_heads(images, features, proposals, None, attnpool=self.backbone.bottom_up.attnpool)
             else:
-                results, _  = self.roi_heads(images, features, proposals, None)
-        
-        #visualize_proposals(batched_inputs, proposals, self.input_format)
+                results, _  = self.roi_heads(
+                    images, features, proposals, None, res5=self.image_projection, 
+                    norm=self.backbone.norm if not self.backbone.output_is_normalized else None)
+
+        # import pdb; pdb.set_trace()
+        # visualize_proposals(batched_inputs, proposals, self.input_format)
+        # visualize_results(batched_inputs, results, self.input_format, vis_pretrain=False, cfg=self.cfg)
+
         if do_postprocess:
             assert not torch.jit.is_scripting(), "Scripting is not supported for postprocess."
             return CLIPFastRCNN._postprocess(results, batched_inputs)
@@ -827,3 +845,51 @@ def visualize_proposals(batched_inputs, proposals, input_format, vis_pretrain=Fa
             to_save = Image.fromarray(np.array(vis_img, np.uint8))
             to_save.save("output/regions/" + f_n.split("/")[-1].split(".")[0] + ".png")
             #break  # only visualize one image in a batch
+
+def visualize_results(batched_inputs, results, input_format, vis_pretrain=False, cfg=None):
+    """
+    A function used to visualize images and results. It shows ground truth
+    bounding boxes on the original image and up to 20 top-scoring predicted
+    object results on the original image. Users can implement different
+    visualization functions for different models.
+
+    Args:
+        batched_inputs (list): a list that contains input to the model.
+        results (list): a list that contains predicted results. Both
+            batched_inputs and results should have the same length.
+    """
+    from detectron2.utils.visualizer import Visualizer
+
+    max_vis_prop = 1
+    if vis_pretrain:
+        for i, (input, prop) in enumerate(zip(batched_inputs, results)):
+            img = input[0] * 255.0
+            img = convert_image_to_rgb(img.permute(1, 2, 0), input_format)
+            box_size = min(len(prop.proposal_boxes), max_vis_prop)
+            v_pred = Visualizer(img, None)
+            v_pred = v_pred.overlay_instances(
+                boxes=prop.proposal_boxes[0:box_size].tensor.cpu().numpy()
+            )
+            prop_img = v_pred.get_image()
+            vis_img = prop_img
+            to_save = Image.fromarray(np.array(vis_img, np.uint8))
+            # to_save.save("output/regions/" + str(i) + ".png")
+            #break  # only visualize one image in a batch
+    else:
+        for input, prop in zip(batched_inputs, results):
+            img = input["image"]
+            img = convert_image_to_rgb(img.permute(1, 2, 0), input_format)
+            box_size = min(len(prop.pred_boxes), max_vis_prop)
+            v_pred = Visualizer(img, MetadataCatalog[cfg.DATASETS.TEST[0]])
+            # v_pred = v_pred.overlay_instances(
+            #     boxes=prop.pred_boxes[0:box_size].tensor.cpu().numpy()
+            # )   
+            v_pred = v_pred.draw_instance_predictions(prop)
+
+            prop_img = v_pred.get_image()
+            vis_img = prop_img
+            # f_n = input['file_name']
+            to_save = Image.fromarray(np.array(vis_img, np.uint8))
+            to_save.save("output/regions/" + "results.png")
+            #break  # only visualize one image in a batch
+    return to_save

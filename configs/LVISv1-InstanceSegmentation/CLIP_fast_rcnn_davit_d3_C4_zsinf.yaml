@@ -1,0 +1,19 @@
+_BASE_: "./CLIP_fast_rcnn_R_50_C4.yaml"
+MODEL:
+  MASK_ON: False
+  BACKBONE:
+    NAME: "build_clip_davit_backbone"
+    FREEZE_AT: 2  
+  FOCAL:
+    OUT_FEATURES: ["stage5"]
+  ROI_HEADS:
+    NAME: "CLIPTransformerROIHeads"
+    NUM_CLASSES: 1203
+    NMS_THRESH_TEST: 0.5
+    IN_FEATURES: ["stage5"]    
+  CLIP:
+    NO_BOX_DELTA: True
+    OFFLINE_RPN_NMS_THRESH: 0.9
+    USE_TEXT_EMB_CLASSIFIER: "text-encoder"    
+  TEXT:
+    AUTOGRESSIVE: False

@@ -197,7 +197,7 @@ _C.MODEL.CLIP.CROP_REGION_TYPE = "" # options: "GT", "RPN"
 _C.MODEL.CLIP.BB_RPN_WEIGHTS = None # the weights of pretrained MaskRCNN
 _C.MODEL.CLIP.IMS_PER_BATCH_TEST = 8 # the #images during inference per batch
 
-_C.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER = False # if True, use the CLIP text embedding as the classifier's weights
+_C.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER = None # if True, use the CLIP text embedding as the classifier's weights
 _C.MODEL.CLIP.TEXT_EMB_PATH = None # "/mnt/output_storage/trained_models/lvis_cls_emb/lvis_1203_cls_emb.pth"
 _C.MODEL.CLIP.OFFLINE_RPN_CONFIG = None # option: all configs of pretrained RPN
 _C.MODEL.CLIP.NO_BOX_DELTA = False  # if True, during inference, no box delta will be applied to region proposals
@@ -231,6 +231,72 @@ _C.MODEL.CLIP.TEACHER_CONCEPT_POOL_EMB = None # if not None, it uses the same co
 _C.MODEL.CLIP.TEACHER_POOLER_RESOLUTION = 14 # RoIpooling resolution of teacher model
 
 _C.MODEL.CLIP.TEXT_EMB_DIM = 1024 # the dimension of precomputed class embeddings
+
+
+_C.MODEL.SWIN = CN()
+_C.MODEL.SWIN.PATCH_SIZE = 4
+_C.MODEL.SWIN.IN_CHANS = 3
+_C.MODEL.SWIN.EMBED_DIM = 128
+_C.MODEL.SWIN.DEPTHS = [2, 2, 18, 2]
+_C.MODEL.SWIN.NUM_HEADS = [4, 8, 16, 32]
+_C.MODEL.SWIN.WINDOW_SIZE = 7
+_C.MODEL.SWIN.MLP_RATIO = 4.
+_C.MODEL.SWIN.DROP_RATE = .0
+_C.MODEL.SWIN.ATTN_DROP_RATE = .0
+_C.MODEL.SWIN.DROP_PATH_RATE = .0
+_C.MODEL.SWIN.QKV_BIAS = True
+_C.MODEL.SWIN.QK_SCALE = False
+_C.MODEL.SWIN.APE = False
+_C.MODEL.SWIN.PATCH_NORM = True
+_C.MODEL.SWIN.OUT_FEATURES = ["stage2", "stage3", "stage4", "stage5"]
+
+
+_C.MODEL.FOCAL = CN()
+_C.MODEL.FOCAL.PATCH_SIZE = 4
+_C.MODEL.FOCAL.IN_CHANS = 3
+_C.MODEL.FOCAL.EMBED_DIM = 128
+_C.MODEL.FOCAL.DEPTHS = [2, 2, 18, 2]
+_C.MODEL.FOCAL.NUM_HEADS = [4, 8, 16, 32]
+_C.MODEL.FOCAL.FOCAL_LEVELS = [3, 3, 3, 3]
+_C.MODEL.FOCAL.FOCAL_WINDOWS = [3, 3, 3, 3]
+_C.MODEL.FOCAL.MLP_RATIO = 4.
+_C.MODEL.FOCAL.DROP_RATE = .0
+_C.MODEL.FOCAL.ATTN_DROP_RATE = .0
+_C.MODEL.FOCAL.DROP_PATH_RATE = .0
+_C.MODEL.FOCAL.QKV_BIAS = True
+_C.MODEL.FOCAL.QK_SCALE = False
+_C.MODEL.FOCAL.APE = False
+_C.MODEL.FOCAL.PATCH_NORM = True
+_C.MODEL.FOCAL.USE_CONV_EMBED = True
+_C.MODEL.FOCAL.SCALING_MODULATOR = True
+_C.MODEL.FOCAL.USE_CHECKPOINT = False
+_C.MODEL.FOCAL.USE_POSTLN = True
+_C.MODEL.FOCAL.USE_POSTLN_IN_MODULATION = False
+_C.MODEL.FOCAL.USE_LAYERSCALE = True
+_C.MODEL.FOCAL.OUT_FEATURES = ["stage2", "stage3", "stage4", "stage5"]
+
+
+_C.MODEL.DAVIT = CN()
+_C.MODEL.DAVIT.DROP_PATH_RATE = 0.0
+_C.MODEL.DAVIT.PATCH_SIZE = [7, 2, 2, 2]
+_C.MODEL.DAVIT.PATCH_STRIDE = [4, 2, 2, 2]
+_C.MODEL.DAVIT.PATCH_PADDING = [3, 0, 0, 0]
+_C.MODEL.DAVIT.PATCH_PRENORM = [False, True, True, True]
+_C.MODEL.DAVIT.DIM_EMBED = [128, 256, 512, 1024]
+_C.MODEL.DAVIT.NUM_HEADS = [4, 8, 16, 32]
+_C.MODEL.DAVIT.NUM_GROUPS = [4, 8, 16, 32]
+_C.MODEL.DAVIT.DEPTHS = [1, 1, 9, 1]
+_C.MODEL.DAVIT.OUT_FEATURES = ["stage2", "stage3", "stage4", "stage5"]
+
+_C.MODEL.VIT = CN()
+_C.MODEL.VIT.NUM_CLASSES = 1000
+_C.MODEL.VIT.IMG_SIZE = 224
+_C.MODEL.VIT.DROP_PATH_RATE = .0
+_C.MODEL.VIT.OUT_FEATURES = ["stage2", "stage3", "stage4", "stage5"]
+
+_C.MODEL.TEXT = CN()
+_C.MODEL.TEXT.AUTOGRESSIVE = True
+
 _C.INPUT_DIR = "./datasets/custom_images" # the folder that includes the images for region feature extraction
 
 # ---------------------------------------------------------------------------- #

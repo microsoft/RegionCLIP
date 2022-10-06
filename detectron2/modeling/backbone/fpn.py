@@ -10,7 +10,7 @@ from detectron2.layers import Conv2d, ShapeSpec, get_norm
 from .backbone import Backbone
 from .build import BACKBONE_REGISTRY
 from .resnet import build_resnet_backbone
-from .clip_backbone import build_clip_resnet_backbone
+from .clip_resnet import build_clip_resnet_backbone
 
 __all__ = ["build_clip_resnet_fpn_backbone", "build_resnet_fpn_backbone", "build_retinanet_resnet_fpn_backbone", "FPN"]
 

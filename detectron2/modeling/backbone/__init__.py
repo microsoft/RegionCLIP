@@ -12,7 +12,11 @@ from .resnet import (
     make_stage,
     BottleneckBlock,
 )
-from .clip_backbone import ModifiedResNet, build_resnet_clip, build_clip_resnet_backbone
+from .clip_resnet import ModifiedResNet, build_resnet_clip, build_clip_resnet_backbone
+from .clip_swin import build_clip_swin_backbone
+from .clip_focal import build_clip_focal_backbone
+from .clip_davit import build_clip_davit_backbone
+from .clip_vit import build_clip_vit_backbone
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]
 # TODO can expose more resnet blocks after careful consideration

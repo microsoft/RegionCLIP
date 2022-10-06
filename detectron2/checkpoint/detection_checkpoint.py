@@ -13,6 +13,29 @@ from detectron2.utils.file_io import PathManager
 from .c2_model_loading import align_and_update_state_dicts
 from .clip_model_loading import align_and_update_state_dicts_for_CLIP
 
+def interpolate_pos_embed(model, checkpoint_model):
+    if 'backbone.pos_embed' in checkpoint_model:
+        pos_embed_checkpoint = checkpoint_model['backbone.pos_embed']
+        embedding_size = pos_embed_checkpoint.shape[-1]
+        num_patches = model.backbone.patch_embed.num_patches
+        num_extra_tokens = model.backbone.pos_embed.shape[-2] - num_patches
+        # height (== width) for the checkpoint position embedding
+        orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
+        # height (== width) for the new position embedding
+        new_size = int(num_patches ** 0.5)
+        # class_token and dist_token are kept unchanged
+        if orig_size != new_size:
+            print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
+            extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
+            # only the position tokens are interpolated
+            pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
+            pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
+            pos_tokens = torch.nn.functional.interpolate(
+                pos_tokens.float(), size=(new_size, new_size), mode='bicubic', align_corners=False)
+            pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
+            new_pos_embed = torch.cat((extra_tokens, pos_tokens.type_as(extra_tokens)), dim=1)
+            checkpoint_model['backbone.pos_embed'] = new_pos_embed
+
 class DetectionCheckpointer(Checkpointer):
     """
     Same as :class:`Checkpointer`, but is able to:
@@ -115,6 +138,30 @@ class DetectionCheckpointer(Checkpointer):
                     checkpoint["model"],
                     c2_conversion=checkpoint.get("__author__", None) == "Caffe2",
                 )
+
+        # mapping keys
+        
+        # for swin
+        new_ckpt = {key.replace('image_encoder.', 'backbone.'): val for key, val in checkpoint['model'].items()}
+        new_ckpt = {key.replace('text_encoder.', 'roi_heads.box_predictor.lang_encoder.lang_encoder.') if key.startswith('text_encoder.') else key: val for key, val in new_ckpt.items()}
+        new_ckpt = {key.replace('text_projection', 'roi_heads.box_predictor.lang_encoder.lang_proj'): val for key, val in new_ckpt.items()}
+        new_ckpt = {key.replace('logit_scale', 'roi_heads.box_predictor.lang_encoder.logit_scale') if key == 'logit_scale' else key: val for key, val in new_ckpt.items()}
+
+        # for focalnet
+        new_ckpt = {(key.replace('norm', 'backbone.norm') if key.startswith('norm.') else key): val for key, val in new_ckpt.items()}
+        new_ckpt = {(key.replace('lang_encoder.lang_encoder.', 'roi_heads.box_predictor.lang_encoder.lang_encoder.') if key.startswith('lang_encoder.lang_encoder.') else key): val for key, val in new_ckpt.items()}
+        new_ckpt = {key.replace('lang_encoder.logit_scale', 'roi_heads.box_predictor.lang_encoder.logit_scale') if key == 'lang_encoder.logit_scale' else key: val for key, val in new_ckpt.items()}
+        new_ckpt = {key.replace('lang_encoder.lang_proj', 'roi_heads.box_predictor.lang_encoder.lang_proj') if key == 'lang_encoder.lang_proj' else key: val for key, val in new_ckpt.items()}
+
+        # for vit
+        new_ckpt = {(key.replace('lang_encoder.', 'roi_heads.box_predictor.lang_encoder.lang_encoder.') if key.startswith('lang_encoder.') else key): val for key, val in new_ckpt.items()}
+        new_ckpt = {(key.replace('lang_projection', 'roi_heads.box_predictor.lang_encoder.lang_proj') if key == 'lang_projection' else key): val for key, val in new_ckpt.items()}
+
+
+        checkpoint['model'] = new_ckpt
+
+        interpolate_pos_embed(self.model, checkpoint['model'])
+
         # for non-caffe2 models, use standard ways to load it
         incompatible = super()._load_model(checkpoint)
         del checkpoint  # try saving memory

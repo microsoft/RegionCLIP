@@ -7,10 +7,11 @@ from contextlib import ExitStack, contextmanager
 from typing import List, Union
 import torch
 from torch import nn
-
+from detectron2.data import MetadataCatalog
 from detectron2.utils.comm import get_world_size, is_main_process
 from detectron2.utils.logger import log_every_n_seconds
 
+from ..data.datasets.coco_zeroshot_categories import COCO_80_ALL_CLS
 
 class DatasetEvaluator:
     """
@@ -101,7 +102,7 @@ class DatasetEvaluators(DatasetEvaluator):
 
 
 def inference_on_dataset(
-    model, data_loader, evaluator: Union[DatasetEvaluator, List[DatasetEvaluator], None]
+    model, data_loader, evaluator: Union[DatasetEvaluator, List[DatasetEvaluator], None], dataset_name
 ):
     """
     Run model on the data_loader and evaluate the metrics with evaluator.
@@ -145,6 +146,10 @@ def inference_on_dataset(
             stack.enter_context(inference_context(model))
         stack.enter_context(torch.no_grad())
 
+        # pre-extract textual embeddings for all categories
+        class_names = MetadataCatalog[dataset_name].get('thing_classes')        
+        model.roi_heads.box_predictor.lang_encoder.get_text_embeddings(class_names, is_eval=True)
+
         start_data_time = time.perf_counter()
         for idx, inputs in enumerate(data_loader):
             total_data_time += time.perf_counter() - start_data_time
@@ -155,6 +160,7 @@ def inference_on_dataset(
                 total_eval_time = 0
 
             start_compute_time = time.perf_counter()
+
             outputs = model(inputs)
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
