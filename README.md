@@ -22,7 +22,7 @@ We propose RegionCLIP that significantly extends CLIP to learn region-level visu
 - **Results**: Our method demonstrates **state-of-the-art** results for zero-shot object detection and open-vocabulary object detection.
 
 ## Updates
-* :collision: [10/05/2022] RegionCLIP now supports not only resnet but also many vision transformers (e.g., vit, swin, davit, focalnet) for zero-shot object detection! Please checkout the zero-shot branch!
+* :collision: [10/05/2022] RegionCLIP now supports not only resnet but also many vision transformers (e.g., vit, swin, davit, focalnet) for zero-shot object detection! Please checkout the [zero-shot branch](https://github.com/microsoft/RegionCLIP/tree/zero-shot)!
 * [09/23/2022] As requested by researchers, we release the [configs](configs/pretrain) and [scripts](pretrain.sh) of pre-training. A full tutorial and pre-training data will be released later. Stay tuned!
 * [09/18/2022] Organizing ECCV Workshop [Computer Vision in the Wild (CVinW)](https://computer-vision-in-the-wild.github.io/eccv-2022/), where two challenges are hosted to evaluate the zero-shot, few-shot and full-shot performance of pre-trained vision models in downstream tasks:
   - [Image Classification in the Wild (ICinW)](https://eval.ai/web/challenges/challenge-page/1832/overview) Challenge evaluates on 20 image classification tasks.
