@@ -224,7 +224,7 @@ setup(
         "dataclasses; python_version<'3.7'",
         "omegaconf>=2.1.0rc1",
         "hydra-core>=1.1.0rc1",
-        "black==21.4b2",
+        "black==24.3.0",
         # When adding to the list, may need to update docs/requirements.txt
         # or add mock in docs/conf.py
     ],
